@@ -18,6 +18,7 @@ import { E3AChallenge } from "@/components/challenges/electronics/E3AChallenge";
 import { E3BChallenge } from "@/components/challenges/electronics/E3BChallenge";
 import { E4Challenge } from "@/components/challenges/electronics/E4Challenge";
 import { SystemsChallenge } from "@/components/challenges/systems/SystemsChallenge";
+import { C0Challenge } from "@/components/challenges/control/C0Challenge";
 import { BranchIcon } from "@/components/icons/BranchIcon";
 import {
   DELIVERY_FORMAT_LABELS,
@@ -74,6 +75,7 @@ const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   E3A: E3AChallenge,
   E3B: E3BChallenge,
   E4: E4Challenge,
+  C0: C0Challenge,
   SI0: (props) => <SystemsChallenge {...props} nodeId="SI0" />,
   SI1A: (props) => <SystemsChallenge {...props} nodeId="SI1A" />,
   SI1B: (props) => <SystemsChallenge {...props} nodeId="SI1B" />,
