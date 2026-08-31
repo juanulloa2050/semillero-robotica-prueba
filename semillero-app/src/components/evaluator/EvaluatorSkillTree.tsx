@@ -23,18 +23,18 @@ import {
   outwardHandle,
   type HandleSide,
 } from "@/lib/treeLayout";
-import { branchCompletedCount, branchProgressPercent, branchesExplored, completedCount } from "@/lib/unlock";
+import { branchCompletedCount, branchProgressPercent, branchesExplored, completedCount, computeAllStatuses } from "@/lib/unlock";
 import { SkillNodeCard } from "@/components/tree/SkillNodeCard";
 import { LaneHeaderNode } from "@/components/tree/LaneHeaderNode";
 import { LaneEdge } from "@/components/tree/LaneEdge";
 import { TravelerCard } from "@/components/tree/TravelerCard";
 import { CandidateNodeResultPanel } from "@/components/evaluator/CandidateNodeResultPanel";
-import type { AppState, NodeStatus } from "@/lib/types";
+import type { AppState } from "@/lib/types";
 
 const nodeTypes = { skill: SkillNodeCard, laneHeader: LaneHeaderNode, traveler: TravelerCard };
 const edgeTypes = { lane: LaneEdge };
 const HANDLE_POSITION: Record<HandleSide, Position> = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };
-const HYBRID_LINKS = [["D2", "M2"], ["E2", "C2"], ["S2", "A2"], ["C4", "SI4"], ["S3B", "SI4"], ["A3A", "E3A"]] as const;
+const HYBRID_LINKS = [["D2", "M2"], ["E2", "C2"], ["S2", "A2_YOLO"], ["C4", "SI4"], ["S3B", "SI4"], ["A3", "E3A"]] as const;
 
 interface Props {
   runId: string;
@@ -47,11 +47,10 @@ function ReviewTreeCanvas({ runId, candidateName, snapshot }: Props) {
   const progress = useMemo(() => snapshot?.progress ?? {}, [snapshot?.progress]);
   const challengeProgress = useMemo(() => snapshot?.challengeProgress ?? {}, [snapshot?.challengeProgress]);
   const positions = useMemo(() => layoutPositions(), []);
-  const statuses = useMemo<Record<string, NodeStatus>>(() => Object.fromEntries(ALL_NODES.map((node) => {
-    if (progress[node.id] === "completed") return [node.id, "completed"];
-    if (challengeProgress[node.id] || progress[node.id] === "available") return [node.id, "available"];
-    return [node.id, "locked"];
-  })), [challengeProgress, progress]);
+  const statuses = useMemo(
+    () => computeAllStatuses(progress, challengeProgress),
+    [challengeProgress, progress]
+  );
   const completedTotal = completedCount(progress);
   const branchesTotal = branchesExplored(progress);
 
@@ -90,7 +89,7 @@ function ReviewTreeCanvas({ runId, candidateName, snapshot }: Props) {
         draggable: false,
         selectable: false,
         zIndex: node.id === IR_NODE.id ? 6 : 3,
-        data: { def: node, status: statuses[node.id], dimmed: false, color: BRANCHES[node.branchId].color, isIR: node.id === IR_NODE.id, targetPosition: HANDLE_POSITION[inward], sourcePosition: HANDLE_POSITION[out], onOpen: setSelectedId, reviewMode: true },
+        data: { def: node, status: statuses[node.id], dimmed: false, color: BRANCHES[node.branchId].color, isIR: node.id === IR_NODE.id, bonus: node.bonus === true, targetPosition: HANDLE_POSITION[inward], sourcePosition: HANDLE_POSITION[out], onOpen: setSelectedId, reviewMode: true },
       };
     });
     return [candidate, ...branchHubs, ...skills];
@@ -112,7 +111,8 @@ function ReviewTreeCanvas({ runId, candidateName, snapshot }: Props) {
       const sourceNode = nodeById(source);
       if (sourceNode) edges.push({ id: `hybrid-${source}-${target}`, source, sourceHandle: "cross", target, targetHandle: "in", type: "lane", zIndex: 0, data: { color: BRANCHES[sourceNode.branchId].color, active: statuses[source] !== "locked" || statuses[target] !== "locked", dimmed: false, variant: "hybrid" } });
     }
-    for (const applicationId of APPLICATION_NODE_IDS) {
+    const applicationIds = APPLICATION_NODE_IDS.flatMap((group) => (Array.isArray(group) ? group : [group]));
+    for (const applicationId of applicationIds) {
       const applicationNode = nodeById(applicationId);
       if (applicationNode && statuses[applicationId] === "completed") edges.push({ id: `feed-${applicationId}`, source: applicationId, sourceHandle: "cross", target: IR_NODE.id, targetHandle: "in", type: "lane", zIndex: 2, data: { color: BRANCHES[applicationNode.branchId].color, active: true, dimmed: false, variant: "irfeed" } });
     }

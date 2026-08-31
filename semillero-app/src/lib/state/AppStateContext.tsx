@@ -16,7 +16,7 @@ import type {
   NodeChallengeProgress,
   NodeStatus,
 } from "@/lib/types";
-import { canFinishJourney, computeStatus } from "@/lib/unlock";
+import { canFinishJourney, computeStatus, isOpenForCompletion } from "@/lib/unlock";
 import { isValidCandidateProfile } from "@/lib/admissions";
 import {
   IMPLEMENTED_CHALLENGE_NODE_IDS,
@@ -522,7 +522,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           normalized.nodeId !== nodeId ||
           prev.submitted ||
           !isValidCandidateProfile(prev.profile) ||
-          computeStatus(nodeId, prev.progress) !== "available"
+          !isOpenForCompletion(computeStatus(nodeId, prev.progress, prev.challengeProgress))
         ) {
           return prev;
         }
@@ -561,7 +561,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         prev.submitted ||
         !isValidCandidateProfile(prev.profile) ||
         isImplementedChallengeNodeId(nodeId) ||
-        computeStatus(nodeId, prev.progress) !== "available"
+        !isOpenForCompletion(computeStatus(nodeId, prev.progress, prev.challengeProgress))
       ) {
         return prev;
       }

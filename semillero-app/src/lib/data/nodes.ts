@@ -17,7 +17,8 @@ function n(
   title: string,
   category: SkillNodeDef["category"],
   description: string,
-  requires: string[]
+  requires: string[],
+  extra?: { bonus?: boolean }
 ): SkillNodeDef {
   return {
     id,
@@ -29,6 +30,7 @@ function n(
     typeLabel: TYPE_LABEL[category],
     description,
     requires,
+    ...extra,
   };
 }
 
@@ -117,21 +119,21 @@ export const SKILL_NODES: SkillNodeDef[] = [
   n("S4", "software", 4, 0, "Software libre", "libre",
     "Crea una herramienta de software útil para un robot: nodo, controlador, GUI, simulador o algoritmo.", ["S3A", "S3B"]),
 
-  // Inteligencia Artificial
-  n("A0", "ai", 0, 0, "Limpia antes de aprender", "fundamentos",
-    "Encuentra problemas en un dataset: duplicados, etiquetas incorrectas, desbalance o contaminación train/test.", []),
-  n("A1A", "ai", 1, -1, "¿Qué significa funcionar?", "sub",
-    "A partir de una matriz de confusión o escenario, decide qué métrica importa más para el problema.", ["A0"]),
-  n("A1B", "ai", 1, 1, "Prepara los datos", "sub",
-    "Elige o aplica técnicas de preprocesamiento: augmentation, resize, normalización, balanceo o limpieza.", ["A0"]),
-  n("A2", "ai", 2, 0, "Entrena algo real", "aplicacion",
-    "Entrena un modelo con una herramienta a tu elección y entrega captura, métrica y explicación del proceso.", ["A1A", "A1B"]),
-  n("A3A", "ai", 3, -1, "El mejor modelo depende del robot", "profundizacion",
-    "Compara modelos por precisión, latencia, tamaño y consumo, y elige el más adecuado según el hardware disponible.", ["A2"]),
-  n("A3B", "ai", 3, 1, "¿Por qué falló fuera del laboratorio?", "profundizacion",
-    "Diagnostica por qué un modelo falla fuera del laboratorio (iluminación, ángulo, ruido) y propone mejoras.", ["A2"]),
-  n("A4", "ai", 4, 0, "IA libre", "libre",
-    "Entrena, evalúa o experimenta con un modelo de IA que te interese y documenta tus resultados.", ["A3A", "A3B"]),
+  // Inteligencia Artificial — percepción de una pelota de tenis de mesa
+  n("A0", "ai", 0, 0, "¿Puedes confiar en tus datos?", "fundamentos",
+    "Audita un dataset multiclase de pelotas de tenis de mesa, determina si es confiable para detectar únicamente `ball` y prepara una versión utilizable, documentando cada problema y decisión de limpieza.", []),
+  n("A1", "ai", 1, 0, "¿Entiendes lo que estás observando?", "sub",
+    "Analiza distribución, geometría y color del dataset ya auditado: cuartiles de bounding boxes, motion blur como hipótesis física, histogramas HSV y el falso dilema Precision vs. Recall.", ["A0"]),
+  n("A2_YOLO", "ai", 2, -1, "Entrena, pero primero formula una hipótesis", "aplicacion",
+    "Entrena un detector YOLOv8 con Ultralytics: baseline reproducible, experimentación controlada (una variable a la vez) e interpretación de las pérdidas reportadas.", ["A1"]),
+  n("A2_OPENCV", "ai", 2, 1, "¿Realmente necesitas Deep Learning?", "aplicacion",
+    "Construye un detector clásico con OpenCV (HSV, threshold, contornos) a partir de los hallazgos de A1, y audita si el código generado por IA convierte los colores correctamente.", ["A1"]),
+  n("A3", "ai", 3, 0, "¿Tu solución funciona fuera del caso ideal?", "profundizacion",
+    "Compara experimentalmente YOLO y OpenCV bajo degradaciones controladas (brillo y otras), sin asumir de antemano cuál se degrada primero.", ["A2_YOLO", "A2_OPENCV"]),
+  n("A4_RL", "ai", 4, -1, "El agente optimiza lo que escribiste", "libre",
+    "BONUS — Entrena un agente de Reinforcement Learning, analiza su curva de recompensa e identifica si maximizar el reward realmente logró el comportamiento deseado (reward hacking).", ["A3"], { bonus: true }),
+  n("A4_GENERAL", "ai", 4, 1, "¿Puedes salirte del dataset?", "libre",
+    "BONUS — Consigue evidencia de que tu detector funciona fuera del dominio visual original y, opcionalmente, añade tracking temporal eficiente en vez de detectar en cada frame.", ["A3"], { bonus: true }),
 
   // Sistemas e Integración Robótica
   n("SI0", "systems", 0, 0, "Entra a la terminal", "fundamentos",
@@ -165,7 +167,15 @@ export const IR_NODE: SkillNodeDef = n(
   []
 );
 
-export const APPLICATION_NODE_IDS = ["D2", "M2", "E2", "C2", "S2", "A2", "SI2"];
+export const APPLICATION_NODE_IDS: ReadonlyArray<string | readonly string[]> = [
+  "D2",
+  "M2",
+  "E2",
+  "C2",
+  "S2",
+  ["A2_YOLO", "A2_OPENCV"],
+  "SI2",
+];
 
 export const ALL_NODES: SkillNodeDef[] = [...SKILL_NODES, IR_NODE];
 

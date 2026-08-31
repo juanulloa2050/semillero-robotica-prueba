@@ -19,6 +19,7 @@ export interface SkillNodeData {
   dimmed: boolean;
   color: string;
   isIR?: boolean;
+  bonus?: boolean;
   targetPosition?: Position;
   sourcePosition?: Position;
   onOpen: (id: string) => void;
@@ -87,6 +88,22 @@ function ReadyIcon() {
   );
 }
 
+function InProgressIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="7.5" />
+      <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function SkillNodeCard({ data }: NodeProps) {
   const d = data as SkillNodeData;
   const {
@@ -95,6 +112,7 @@ export function SkillNodeCard({ data }: NodeProps) {
     dimmed,
     color,
     isIR = false,
+    bonus = false,
     targetPosition = Position.Top,
     sourcePosition = Position.Bottom,
     reviewMode = false,
@@ -115,29 +133,33 @@ export function SkillNodeCard({ data }: NodeProps) {
       return () => clearTimeout(timeout);
     }
 
-    if (prev === "available" && status === "completed") {
+    if ((prev === "available" || prev === "in_progress") && status === "completed") {
       setJustCompleted(true);
       const timeout = setTimeout(() => setJustCompleted(false), 500);
       return () => clearTimeout(timeout);
     }
   }, [status]);
 
+  const isOpen = status === "available" || status === "in_progress";
+
   const statusLabel =
     status === "completed"
       ? "Completado"
-      : status === "available"
-        ? reviewMode ? "Con actividad" : "Listo"
-        : reviewMode ? "Sin actividad" : "Bloqueado";
+      : status === "in_progress"
+        ? reviewMode ? "Con actividad" : "En progreso"
+        : status === "available"
+          ? reviewMode ? "Disponible" : "Listo"
+          : reviewMode ? "Sin actividad" : "Bloqueado";
 
   const bodyClass =
     status === "completed"
       ? "border-ice/65 bg-gradient-to-br from-tech to-cyan text-night"
-      : status === "available"
+      : isOpen
         ? "border-2 bg-surface-raised text-ink"
         : "border border-dashed border-muted/55 bg-surface/80 text-muted";
 
   const bodyStyle: CSSProperties = {
-    ...(status === "available"
+    ...(isOpen
       ? {
           borderColor: color,
           background: `linear-gradient(140deg, #0E2C44 45%, ${color}26)`,
@@ -155,7 +177,7 @@ export function SkillNodeCard({ data }: NodeProps) {
   const statusClass =
     status === "completed"
       ? "border-night/15 bg-night/15 text-night"
-      : status === "available"
+      : isOpen
         ? "border-current/25 bg-night/35"
         : "border-muted/25 bg-night/30 text-muted";
 
@@ -200,14 +222,18 @@ export function SkillNodeCard({ data }: NodeProps) {
             {reviewMode
               ? status === "completed"
                 ? "El aspirante completó este reto. Abre sus resultados."
-                : status === "available"
+                : status === "in_progress"
                   ? "Hay progreso guardado. Abre los resultados disponibles."
-                  : "El aspirante todavía no registra actividad en este reto."
+                  : status === "available"
+                    ? "El reto está disponible, pero el aspirante aún no registra actividad."
+                    : "El aspirante todavía no registra actividad en este reto."
               : status === "completed"
               ? "Reto completado. Puedes volver a revisar el detalle."
-              : status === "available"
-                ? "Reto listo. Ábrelo para ver las instrucciones."
-                : "Abre el reto para consultar sus prerrequisitos."}
+              : status === "in_progress"
+                ? "Tienes progreso guardado. Continúa donde lo dejaste."
+                : status === "available"
+                  ? "Reto listo. Ábrelo para ver las instrucciones."
+                  : "Abre el reto para consultar sus prerrequisitos."}
           </p>
         </motion.div>
       )}
@@ -247,6 +273,11 @@ export function SkillNodeCard({ data }: NodeProps) {
           {isIR && (
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-current/75">
               Reto integrador
+            </p>
+          )}
+          {!isIR && bonus && (
+            <p className="inline-flex w-fit items-center rounded-full border border-cyan/40 bg-cyan/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan">
+              Bonus
             </p>
           )}
 
@@ -289,10 +320,12 @@ export function SkillNodeCard({ data }: NodeProps) {
             </span>
             <span
               className={`flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-1 text-[11px] font-semibold leading-none ${statusClass}`}
-              style={status === "available" ? { color } : undefined}
+              style={isOpen ? { color } : undefined}
             >
               {status === "completed" ? (
                 <CheckIcon />
+              ) : status === "in_progress" ? (
+                <InProgressIcon />
               ) : status === "available" ? (
                 <ReadyIcon />
               ) : (

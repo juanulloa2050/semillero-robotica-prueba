@@ -12,15 +12,18 @@ menos 2** de los siguientes 7 nodos (uno por rama, todos de nivel Aplicación):
 
 ```text
 D2 (Diseño) · M2 (Mecánica) · E2 (Electrónica) · C2 (Control)
-S2 (Software) · A2 (IA) · SI2 (Sistemas)
+S2 (Software) · A2-YOLO o A2-OpenCV (IA) · SI2 (Sistemas)
 ```
 
 ```text
-        D2   M2   E2   C2   S2   A2   SI2
+        D2   M2   E2   C2   S2   A2*  SI2
          \    \    |    |    /    /    /
           \    \   |    |   /    /    /
            ---------- IR ----------
         (con ≥ 2 de los 7 completados)
+
+        * cualquiera de A2-YOLO o A2-OpenCV cuenta como el nivel
+          de Aplicación de IA (basta uno de los dos).
 ```
 
 ### Ya definido
@@ -35,10 +38,10 @@ S2 (Software) · A2 (IA) · SI2 (Sistemas)
   - Regla de desbloqueo sugerida (más rica que la implementada hoy, dos rutas
     alternativas):
     - **Ruta multidisciplinar:** nivel de Aplicación alcanzado en dos ramas
-      distintas (ej. D2+M2, E2+S2, A2+S2). *(Esta es la que está implementada
+      distintas (ej. D2+M2, E2+S2, A2-YOLO+S2). *(Esta es la que está implementada
       hoy, simplificada a "cualquiera 2 de los 7".)*
     - **Ruta especialista:** nivel avanzado en una rama + fundamentos en otras
-      dos (ej. S3B + A1A + SI1A). *(No implementada todavía — ver "Por
+      dos (ej. S3B + A1 + SI1A). *(No implementada todavía — ver "Por
       definir" más abajo si quieres agregarla.)*
   - Enunciado original: "Combina al menos dos de las áreas que exploraste
     para proponer o construir una solución robótica."
@@ -54,8 +57,8 @@ S2 (Software) · A2 (IA) · SI2 (Sistemas)
 
 - **Tipo de reto:** J (proyecto abierto con revisión humana).
 - **Regla de desbloqueo:** nivel de Aplicación completado en dos ramas
-  distintas; es decir, al menos dos de `D2`, `M2`, `E2`, `C2`, `S2`, `A2`
-  y `SI2`.
+  distintas; es decir, al menos dos de `D2`, `M2`, `E2`, `C2`, `S2`,
+  `A2_YOLO`/`A2_OPENCV` (cualquiera de los dos cuenta como IA) y `SI2`.
 - **Enunciado:** formular un proyecto de investigación en robótica que integre
   al menos dos áreas y pueda validarse mediante evidencia observable.
 - **Etapas obligatorias:**
@@ -85,9 +88,9 @@ sin ser nodos nuevos del árbol:
 | E2 + C4 | Control embebido |
 | S3B + SI4 | Arquitectura ROS 2 |
 | S3A + SI3B + E2 | Comunicación robótica |
-| A3A + SI6 | IA en robot |
+| A3 + SI6 | IA en robot |
 | D2 + M2 + E2 | Diseño mecatrónico |
-| A2 + S2 + C4 | Autonomía |
+| A2-YOLO + S2 + C4 | Autonomía |
 
 _(Completar solo si decides implementar insignias/rutas alternativas — no es
 necesario para que IR funcione.)_

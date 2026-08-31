@@ -308,7 +308,7 @@ reto libre — ambas se desbloquean directamente al completar SI4.
     robótica."
   - Opciones: script Bash, servicio, Docker, paquete ROS 2, logging,
     automatización, comunicación entre dispositivos.
-  - Conecta con: A3A (IA), S4 (Software) e IR — referencia conceptual, y
+  - Conecta con: A3 (IA), S4 (Software) e IR — referencia conceptual, y
     además es uno de los caminos de entrada a IR (ver `08-integracion-robotica-ir.md`).
 
 ### Por definir

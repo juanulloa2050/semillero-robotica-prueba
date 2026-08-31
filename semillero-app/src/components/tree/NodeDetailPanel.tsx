@@ -27,6 +27,14 @@ import { M3AChallenge } from "@/components/challenges/mechanics/M3AChallenge";
 import { M3BChallenge } from "@/components/challenges/mechanics/M3BChallenge";
 import { M4Challenge } from "@/components/challenges/mechanics/M4Challenge";
 import { IRChallenge } from "@/components/challenges/integration/IRChallenge";
+import { AiNodeChallenge } from "@/components/challenges/ai/AiNodeChallenge";
+import { A0_CONTENT } from "@/lib/challenges/ai/a0";
+import { A1_CONTENT } from "@/lib/challenges/ai/a1";
+import { A2_YOLO_CONTENT } from "@/lib/challenges/ai/a2-yolo";
+import { A2_OPENCV_CONTENT } from "@/lib/challenges/ai/a2-opencv";
+import { A3_CONTENT } from "@/lib/challenges/ai/a3";
+import { A4_RL_CONTENT } from "@/lib/challenges/ai/a4-rl";
+import { A4_GENERAL_CONTENT } from "@/lib/challenges/ai/a4-general";
 import { BranchIcon } from "@/components/icons/BranchIcon";
 import {
   DELIVERY_FORMAT_LABELS,
@@ -50,6 +58,12 @@ const STATUS_COPY: Record<
     eyebrow: "Listo para explorar",
     detail:
       "Cuando registres tu entrega, este reto quedará completado y podrá abrir nuevas rutas.",
+  },
+  in_progress: {
+    label: "En progreso",
+    eyebrow: "Tienes progreso guardado",
+    detail:
+      "Guardaste avances en este reto. Continúa donde lo dejaste para completarlo.",
   },
   completed: {
     label: "Completado",
@@ -103,6 +117,13 @@ const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   M3B: M3BChallenge,
   M4: M4Challenge,
   IR: IRChallenge,
+  A0: (props) => <AiNodeChallenge {...props} content={A0_CONTENT} />,
+  A1: (props) => <AiNodeChallenge {...props} content={A1_CONTENT} />,
+  A2_YOLO: (props) => <AiNodeChallenge {...props} content={A2_YOLO_CONTENT} />,
+  A2_OPENCV: (props) => <AiNodeChallenge {...props} content={A2_OPENCV_CONTENT} />,
+  A3: (props) => <AiNodeChallenge {...props} content={A3_CONTENT} />,
+  A4_RL: (props) => <AiNodeChallenge {...props} content={A4_RL_CONTENT} />,
+  A4_GENERAL: (props) => <AiNodeChallenge {...props} content={A4_GENERAL_CONTENT} />,
 };
 
 export function NodeDetailPanel({
@@ -318,8 +339,13 @@ function ChallengeHeader({
             <BranchIcon branch={node.branchId} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.17em] text-cyan sm:text-xs">
+            <p className="flex items-center gap-2 truncate text-[10px] font-semibold uppercase tracking-[0.17em] text-cyan sm:text-xs">
               {branch.name}
+              {node.bonus && (
+                <span className="rounded-full border border-cyan/40 bg-cyan/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.14em] text-cyan">
+                  Bonus
+                </span>
+              )}
             </p>
             <p className="mt-0.5 truncate text-xs text-muted">
               Reto {node.id} · {STATUS_COPY[status].label}
@@ -376,6 +402,7 @@ function ChallengeBody({
   const presentation = getChallengePresentation(node);
   const statusCopy = STATUS_COPY[status];
   const DetailedChallenge = DETAILED_CHALLENGE_COMPONENTS[node.id];
+  const isOpen = status === "available" || status === "in_progress";
 
   if (DetailedChallenge && status !== "locked") {
     return (
@@ -462,7 +489,7 @@ function ChallengeBody({
             className={`rounded-2xl border p-5 sm:p-6 ${
               status === "completed"
                 ? "border-ok/30 bg-ok/[0.07]"
-                : status === "available"
+                : isOpen
                   ? "border-cyan/25 bg-cyan/[0.055]"
                   : "border-line bg-surface/45"
             }`}
@@ -496,7 +523,7 @@ function ChallengeBody({
               </div>
             )}
 
-            {status === "available" && !testerMode && (
+            {isOpen && !testerMode && (
               <motion.button
                 type="button"
                 whileHover={reduceMotion ? undefined : { y: -2 }}
@@ -509,7 +536,7 @@ function ChallengeBody({
               </motion.button>
             )}
 
-            {status === "available" && testerMode && (
+            {isOpen && testerMode && (
               <div className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-cyan/25 bg-cyan/[0.06] px-4 text-center text-xs font-semibold text-cyan">
                 Modo tester: solo vista, no registra entregas
               </div>
@@ -543,12 +570,13 @@ function MetaPill({ label }: { label: string }) {
 }
 
 function StatusPill({ status }: { status: NodeStatus }) {
+  const isOpen = status === "available" || status === "in_progress";
   return (
     <span
       className={`inline-flex min-h-7 items-center gap-1.5 rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.11em] ${
         status === "completed"
           ? "border-ok/35 bg-ok/10 text-ok"
-          : status === "available"
+          : isOpen
             ? "border-cyan/35 bg-cyan/10 text-cyan"
             : "border-line bg-night/30 text-muted"
       }`}
@@ -557,7 +585,7 @@ function StatusPill({ status }: { status: NodeStatus }) {
         className={`h-1.5 w-1.5 rounded-full ${
           status === "completed"
             ? "bg-ok"
-            : status === "available"
+            : isOpen
               ? "bg-cyan shadow-[0_0_8px_rgba(53,196,232,0.75)]"
               : "bg-muted"
         }`}
@@ -605,18 +633,27 @@ function DeliveryFormatCard({ format }: { format: DeliveryFormat }) {
 }
 
 function StatusIcon({ status }: { status: NodeStatus }) {
+  const isOpen = status === "available" || status === "in_progress";
   return (
     <span
       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
         status === "completed"
           ? "border-ok/30 bg-ok/10 text-ok"
-          : status === "available"
+          : isOpen
             ? "border-cyan/30 bg-cyan/10 text-cyan"
             : "border-line bg-night/35 text-muted"
       }`}
       aria-hidden="true"
     >
-      {status === "completed" ? <CheckIcon /> : status === "locked" ? <LockIcon /> : <SparkIcon />}
+      {status === "completed" ? (
+        <CheckIcon />
+      ) : status === "locked" ? (
+        <LockIcon />
+      ) : status === "in_progress" ? (
+        <InProgressIcon />
+      ) : (
+        <SparkIcon />
+      )}
     </span>
   );
 }
@@ -663,6 +700,15 @@ function SparkIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="m12 3 1.5 5.5L19 10l-5.5 1.5L5 10l5.5-1.5L12 3Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function InProgressIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="7.2" />
+      <circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none" />
     </svg>
   );
 }

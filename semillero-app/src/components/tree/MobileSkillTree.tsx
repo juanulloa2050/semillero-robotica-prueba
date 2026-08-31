@@ -29,6 +29,7 @@ export interface MobileSkillTreeProps {
 const STATUS_LABEL: Record<NodeStatus, string> = {
   locked: "Bloqueado",
   available: "Listo para iniciar",
+  in_progress: "En progreso",
   completed: "Completado",
 };
 
@@ -96,9 +97,26 @@ function EyeIcon({ crossed = false }: { crossed?: boolean }) {
   );
 }
 
+function InProgressIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+    >
+      <circle cx="12" cy="12" r="7.2" />
+      <circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function StatusIcon({ status }: { status: NodeStatus }) {
   if (status === "completed") return <CheckIcon />;
   if (status === "locked") return <LockIcon />;
+  if (status === "in_progress") return <InProgressIcon />;
   return <SparkIcon />;
 }
 
@@ -221,12 +239,14 @@ function SkillTreeNode({
   color,
   onOpen,
   special = false,
+  bonus = false,
 }: {
   node: SkillNodeDef;
   status: NodeStatus;
   color: string;
   onOpen: (id: string) => void;
   special?: boolean;
+  bonus?: boolean;
 }) {
   const locked = status === "locked";
   const completed = status === "completed";
@@ -263,6 +283,11 @@ function SkillTreeNode({
         <span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-cyan/25 bg-cyan/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-ice">
           <SparkIcon className="h-3 w-3" />
           Reto integrador
+        </span>
+      )}
+      {!special && bonus && (
+        <span className="mb-3 inline-flex w-fit items-center rounded-full border border-cyan/40 bg-cyan/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan">
+          Bonus
         </span>
       )}
 
@@ -636,6 +661,7 @@ export function MobileSkillTree({
                           status={statuses[node.id] ?? "locked"}
                           color={branch.color}
                           onOpen={onOpen}
+                          bonus={node.bonus === true}
                         />
                       ))}
                     </div>
