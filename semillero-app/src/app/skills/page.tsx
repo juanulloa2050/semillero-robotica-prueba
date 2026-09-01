@@ -72,10 +72,10 @@ const HANDLE_POSITION: Record<HandleSide, Position> = {
 const HYBRID_LINKS = [
   ["D2", "M2"],
   ["E2", "C2"],
-  ["S2", "A2"],
+  ["S2", "A2_YOLO"],
   ["C4", "SI4"],
   ["S3B", "SI4"],
-  ["A3A", "E3A"],
+  ["A3", "E3A"],
 ] as const;
 
 function TreeCanvas() {
@@ -114,7 +114,7 @@ function TreeCanvas() {
 
   const positions = useMemo(() => layoutPositions(), []);
   const statuses = useMemo(() => {
-    const computed = computeAllStatuses(state.progress);
+    const computed = computeAllStatuses(state.progress, state.challengeProgress);
     if (!testerActive) return computed;
     // Modo espectador: todo queda visible y abierto para revisión, sin
     // necesitar progreso ni respuestas reales.
@@ -123,7 +123,7 @@ function TreeCanvas() {
       overridden[id] = status === "completed" ? status : "available";
     }
     return overridden;
-  }, [state.progress, testerActive]);
+  }, [state.progress, state.challengeProgress, testerActive]);
   const completedTotal = completedCount(state.progress);
   const branchesTotal = branchesExplored(state.progress);
   const ready = canFinishJourney(state.progress);
@@ -208,6 +208,7 @@ function TreeCanvas() {
             dimmed: overview && statuses[node.id] === "locked",
             color: BRANCHES[node.branchId].color,
             isIR: node.id === IR_NODE.id,
+            bonus: node.bonus === true,
             targetPosition: HANDLE_POSITION[inward],
             sourcePosition: HANDLE_POSITION[out],
             onOpen: setSelectedId,
@@ -320,7 +321,10 @@ function TreeCanvas() {
     }
 
     if (visible.has(IR_NODE.id)) {
-      for (const applicationId of APPLICATION_NODE_IDS) {
+      const applicationIds = APPLICATION_NODE_IDS.flatMap((group) =>
+        Array.isArray(group) ? group : [group]
+      );
+      for (const applicationId of applicationIds) {
         if (statuses[applicationId] !== "completed") continue;
         const applicationNode = nodeById(applicationId);
         if (!applicationNode) continue;

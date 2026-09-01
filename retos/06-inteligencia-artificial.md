@@ -5,237 +5,175 @@ Color de rama: `#35C4E8` · Datos, modelos y criterio.
 ## Progresión
 
 ```text
-A0 — Limpia antes de aprender (Fundamentos)
-├── A1A — ¿Qué significa funcionar? (Subhabilidad)
-└── A1B — Prepara los datos (Subhabilidad)
-        ↓ (con A1A o A1B completado)
-    A2 — Entrena algo real (Aplicación)
-        ├── A3A — El mejor modelo depende del robot (Profundización)
-        └── A3B — ¿Por qué falló fuera del laboratorio? (Profundización)
-                ↓ (con A3A o A3B completado)
-            A4 — IA libre (Reto libre)
+A0 — ¿Puedes confiar en tus datos? (Fundamentos)
+        ↓
+    A1 — ¿Entiendes lo que estás observando? (Subhabilidad)
+        ↓
+        ├── A2-YOLO — Entrena, pero primero formula una hipótesis (Aplicación)
+        └── A2-OpenCV — ¿Realmente necesitas Deep Learning? (Aplicación)
+                ↓ (con AMBAS completadas — no basta una)
+            A3 — ¿Tu solución funciona fuera del caso ideal? (Profundización)
+                ↓
+                ├── A4-RL — El agente optimiza lo que escribiste (BONUS)
+                └── A4-GENERAL — ¿Puedes salirte del dataset? (BONUS)
 ```
 
-7 nodos. A3A conecta conceptualmente con SI6 (Sistemas) y E3A (Electrónica) —
-referencia de la spec, no bloquea nada hoy.
+7 nodos. A diferencia de las demás bifurcaciones del árbol (donde basta
+completar **una** de las dos ramas paralelas para avanzar), **A3 exige
+completar A2-YOLO y A2-OpenCV** — es el punto donde ambas soluciones se
+comparan experimentalmente, así que no tiene sentido desbloquearlo con solo
+una. Los dos nodos `A4_*` son **bonus explícitos**: no bloquean el cierre de
+la prueba principal (que se considera completa con A0–A3) y se marcan con un
+badge `BONUS` en la UI.
+
+## Estado: los 7 nodos están implementados
+
+Este documento empezó como plantilla genérica (mismo patrón A0 → A1A/A1B →
+A2 → A3A/A3B → A4 que las demás ramas). **Se reemplazó por completo**
+siguiendo `ESPECIFICACION_PRUEBA_IA_ROBOTICA_NODOS_v2.md`, un documento de
+especificación aparte diseñado específicamente para esta rama, que gira
+alrededor de un único problema — detección de una pelota de tenis de mesa —
+en vez del catálogo genérico de subtemas de IA que tenían las demás ramas
+como plantilla.
+
+Lo que sigue describe **lo que hay hoy en el código**
+(`semillero-app/src/lib/challenges/ai/*.ts` +
+`semillero-app/src/components/challenges/ai/AiNodeChallenge.tsx`), no un
+plan. A diferencia de las demás ramas implementadas (un componente React
+distinto por nodo), los 7 nodos de IA comparten **un solo componente
+dirigido por schema** (`AiNodeChallenge`): cada archivo `a0.ts`, `a1.ts`,
+`a2-yolo.ts`, etc. solo declara secciones y campos (texto, texto largo,
+opción única, listas repetibles, evidencia), y tanto el render como la
+validación son genéricos. Se optó por este diseño en vez de siete archivos
+bespoke porque los 7 nodos comparten la misma forma (contexto + preguntas
+explícitas/implícitas + evidencia + reflexión), a diferencia de electrónica
+o mecánica donde cada nodo tiene una interacción visual distinta.
+
+Todos los nodos usan `completionRule` de revisión humana (no hay
+"correcto"/"incorrecto" automático): la app valida longitudes mínimas y
+campos requeridos para saber cuándo una entrega está completa, pero el
+criterio real —justificación, diseño experimental, autocrítica— lo evalúa
+una persona.
 
 ## Resumen
 
-| ID | Título | Nivel | Requiere | Desbloquea |
-|---|---|---|---|---|
-| A0 | Limpia antes de aprender | Fundamentos | — | A1A, A1B |
-| A1A | ¿Qué significa funcionar? | Subhabilidad | A0 | A2 |
-| A1B | Prepara los datos | Subhabilidad | A0 | A2 |
-| A2 | Entrena algo real | Aplicación | A1A o A1B | A3A, A3B |
-| A3A | El mejor modelo depende del robot | Profundización | A2 | A4 |
-| A3B | ¿Por qué falló fuera del laboratorio? | Profundización | A2 | A4 |
-| A4 | IA libre | Reto libre | A3A o A3B | — |
+| ID | Título en el árbol | Nivel | Requiere | Desbloquea | Bonus |
+|---|---|---|---|---|---|
+| A0 | ¿Puedes confiar en tus datos? | Fundamentos | — | A1 | — |
+| A1 | ¿Entiendes lo que estás observando? | Subhabilidad | A0 | A2-YOLO, A2-OpenCV | — |
+| A2_YOLO | Entrena, pero primero formula una hipótesis | Aplicación | A1 | A3 (junto con A2-OpenCV) | — |
+| A2_OPENCV | ¿Realmente necesitas Deep Learning? | Aplicación | A1 | A3 (junto con A2-YOLO) | — |
+| A3 | ¿Tu solución funciona fuera del caso ideal? | Profundización | A2_YOLO **y** A2_OPENCV | A4_RL, A4_GENERAL | — |
+| A4_RL | El agente optimiza lo que escribiste | Reto libre | A3 | — | Sí |
+| A4_GENERAL | ¿Puedes salirte del dataset? | Reto libre | A3 | — | Sí |
 
 ---
 
-## A0 — Limpia antes de aprender
+## A0 — ¿Puedes confiar en tus datos?
 
-**Estado en la app:** Fundamentos · sin requisitos · desbloquea A1A, A1B
+**Estado en la app:** Fundamentos · sin requisitos · desbloquea A1
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "Encuentra problemas en un
-  dataset: duplicados, etiquetas incorrectas, desbalance o contaminación
-  train/test."
-- **De la especificación original:**
-  - Reto: encontrar duplicados, etiquetas incorrectas, desbalance,
-    contaminación train/test, muestras malas.
+Instrucción abierta (no se enumeran los problemas del dataset de antemano).
+Incluye un enlace de descarga al dataset contaminado para estudiantes
+(`public/challenges/ai/a0/table-tennis-ball-dataset-student.zip`, ~37 MB —
+generado con `C:\ROBOTICA\PRUEBA\exam_dataset_build\build_exam_dataset.py`,
+seed fija, sin las claves de respuesta privadas).
 
-### Por definir
-
-- **Tipo de reto sugerido:** B (selección múltiple) o G (interacción visual sobre una tabla de datos)
-- **Enunciado final:** _(completar)_
-- **Recursos que se muestran:** _(completar — ¿tabla/dataset de ejemplo con qué problemas plantados?)_
-- **Opciones / respuesta correcta:** _(completar)_
-- **Pistas:**
-  - Pista 1: _(completar)_
-  - Pista 2: _(completar)_
-  - Pista 3: _(completar)_
-- **Feedback si acierta:** _(completar)_
-- **Feedback si no acierta:** _(completar)_
-- **Intentos máximos:** _(completar — sugerido: ilimitado)_
-- **Notas para el evaluador:** _(completar)_
+4 secciones: estructura del dataset (clases, monoclase, remapeo de IDs,
+negativos vs. missing annotations), auditoría técnica (validaciones sin
+mirar la imagen, errores solo visibles comparando imagen/anotación,
+decisión sobre motion blur, evidencia de auditoría), limpieza reproducible
+(proceso de limpieza, orden split/augmentation con justificación anti-leakage)
+y la reflexión final compartida "¿Qué podría estar mal?".
 
 ---
 
-## A1A — ¿Qué significa funcionar?
+## A1 — ¿Entiendes lo que estás observando?
 
-**Estado en la app:** Subhabilidad · requiere A0 · desbloquea A2 (junto con A1B, basta uno)
+**Estado en la app:** Subhabilidad · requiere A0 · desbloquea A2_YOLO y A2_OPENCV (ambos, no uno solo)
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "A partir de una matriz de
-  confusión o escenario, decide qué métrica importa más para el problema."
-- **De la especificación original:**
-  - Reto: a partir de matriz de confusión o escenario, seleccionar qué métrica
-    importa. Ejemplo dado: "En rescate, ¿qué error te preocupa más al detectar
-    personas?"
-
-### Por definir
-
-- **Tipo de reto sugerido:** A (selección única) + I (justificación breve)
-- **Enunciado final:** _(completar — ¿se usa el ejemplo de rescate o uno propio?)_
-- **Recursos que se muestran:** _(completar — matriz de confusión de ejemplo)_
-- **Opciones / respuesta correcta:** _(completar)_
-- **Pistas:**
-  - Pista 1: _(completar)_
-  - Pista 2: _(completar)_
-  - Pista 3: _(completar)_
-- **Feedback si acierta:** _(completar)_
-- **Feedback si no acierta:** _(completar)_
-- **Intentos máximos:** _(completar — sugerido: ilimitado)_
-- **Notas para el evaluador:** _(completar)_
+5 secciones: EDA cuantitativo (cuartiles de width/height/área/aspect ratio),
+hipótesis física de movimiento (¿más de un régimen geométrico? ¿por qué?),
+Precision vs. Recall (elección + justificación pensando en un robot físico,
+sin ofrecer "ambas" como opción ni sugerir tracking), color/HSV (histogramas,
+thresholds justificados, HSV vs. motion blur) y límites del dominio (HSV vs.
+Deep Learning, qué se puede/no se puede afirmar con este dataset). Cierra
+con la reflexión final compartida.
 
 ---
 
-## A1B — Prepara los datos
+## A2_YOLO — Entrena, pero primero formula una hipótesis
 
-**Estado en la app:** Subhabilidad · requiere A0 · desbloquea A2 (junto con A1A, basta uno)
+**Estado en la app:** Aplicación · requiere A1 · desbloquea A3 (junto con A2_OPENCV, **se necesitan ambos**)
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "Elige o aplica técnicas de
-  preprocesamiento: augmentation, resize, normalización, balanceo o
-  limpieza."
-- **De la especificación original:**
-  - Reto: elegir o aplicar augmentation, resize, normalización, balanceo,
-    limpieza.
-
-### Por definir
-
-- **Tipo de reto sugerido:** A/E (selección o matching problema → técnica)
-- **Enunciado final:** _(completar)_
-- **Recursos que se muestran:** _(completar)_
-- **Opciones / respuesta correcta:** _(completar)_
-- **Pistas:**
-  - Pista 1: _(completar)_
-  - Pista 2: _(completar)_
-  - Pista 3: _(completar)_
-- **Feedback si acierta:** _(completar)_
-- **Feedback si no acierta:** _(completar)_
-- **Intentos máximos:** _(completar — sugerido: ilimitado)_
-- **Notas para el evaluador:** _(completar)_
+4 secciones: baseline reproducible (config + métricas + evidencia),
+experimentación controlada — incluye una **bitácora repetible** (mínimo 3
+filas) con columnas Cambio / Hipótesis / Resultado / Interpretación, más
+explicación de las pérdidas reportadas por YOLO; augmentations justificadas
+físicamente; y una sección bonus **opcional** ("¿Modificarías la
+arquitectura?") que no bloquea completar el nodo si se deja en blanco.
+Cierra con la reflexión final compartida.
 
 ---
 
-## A2 — Entrena algo real
+## A2_OPENCV — ¿Realmente necesitas Deep Learning?
 
-**Estado en la app:** Aplicación · requiere A1A o A1B · desbloquea A3A, A3B
+**Estado en la app:** Aplicación · requiere A1 · desbloquea A3 (junto con A2_YOLO, **se necesitan ambos**)
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "Entrena un modelo con una
-  herramienta a tu elección y entrega captura, métrica y explicación del
-  proceso."
-- **De la especificación original:**
-  - Herramientas posibles: Edge Impulse, Teachable Machine, notebook
-    preparado, herramienta propia.
-  - Entrega esperada: captura, métrica, modelo o enlace, explicación.
-
-### Por definir
-
-- **Tipo de reto sugerido:** H (subida de evidencia) + I (explicación)
-- **Enunciado final:** _(completar)_
-- **Qué debe entregar exactamente:** _(completar — ¿se exige una herramienta específica o es libre?)_
-- **Criterio de aceptación:** _(completar — ¿métrica mínima, o basta con completar el ciclo?)_
-- **Pistas:**
-  - Pista 1: _(completar)_
-  - Pista 2: _(completar)_
-  - Pista 3: _(completar)_
-- **Feedback si acierta:** _(completar)_
-- **Feedback si no acierta:** _(completar)_
-- **Intentos máximos:** _(completar — sugerido: ilimitado)_
-- **Notas para el evaluador:** _(completar — probablemente necesita revisión humana)_
+3 secciones: pipeline clásico (descripción + código + thresholds HSV),
+auditoría del código (qué revisó el estudiante de código generado por IA,
+en particular la conversión de espacio de color BGR/RGB al usar
+`cv2.imread`) y resultados/límites (ejemplos correctos y fallidos, FPS,
+cuándo preferiría esta solución sobre YOLO). Cierra con la reflexión final
+compartida.
 
 ---
 
-## A3A — El mejor modelo depende del robot
+## A3 — ¿Tu solución funciona fuera del caso ideal?
 
-**Estado en la app:** Profundización · requiere A2 · desbloquea A4 (junto con A3B, basta uno)
+**Estado en la app:** Profundización · requiere A2_YOLO **y** A2_OPENCV · desbloquea A4_RL, A4_GENERAL
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "Compara modelos por
-  precisión, latencia, tamaño y consumo, y elige el más adecuado según el
-  hardware disponible."
-- **De la especificación original:**
-  - Reto: comparar modelos por accuracy, latencia, RAM, tamaño, consumo;
-    elegir según hardware objetivo.
-  - Conecta con: SI6 (Sistemas), E3A (Electrónica) — referencia conceptual.
-
-### Por definir
-
-- **Tipo de reto sugerido:** A (selección) + I (justificación)
-- **Enunciado final:** _(completar)_
-- **Recursos que se muestran:** _(completar — tabla comparativa de 2-3 modelos con sus métricas)_
-- **Opciones / respuesta correcta:** _(completar)_
-- **Pistas:**
-  - Pista 1: _(completar)_
-  - Pista 2: _(completar)_
-  - Pista 3: _(completar)_
-- **Feedback si acierta:** _(completar)_
-- **Feedback si no acierta:** _(completar)_
-- **Intentos máximos:** _(completar — sugerido: ilimitado)_
-- **Notas para el evaluador:** _(completar)_
+3 secciones: diseño del stress test (reducción de brillo 100/80/60/40 % y
+~-60 % obligatoria, degradaciones adicionales opcionales), comparación
+experimental (Precision/Recall/F1/latencia/FPS/p50/p95/fallos por
+condición) e interpretación crítica (mAP vs. mejor solución real, elección
+bajo CPU limitada, propuesta híbrida opcional). Ninguna conclusión se
+revela de antemano en el enunciado. Cierra con la reflexión final
+compartida.
 
 ---
 
-## A3B — ¿Por qué falló fuera del laboratorio?
+## A4_RL — El agente optimiza lo que escribiste
 
-**Estado en la app:** Profundización · requiere A2 · desbloquea A4 (junto con A3A, basta uno)
+**Estado en la app:** Reto libre · **BONUS** · requiere A3 · no bloquea el cierre de la prueba principal
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "Diagnostica por qué un
-  modelo falla fuera del laboratorio (iluminación, ángulo, ruido) y propone
-  mejoras."
-- **De la especificación original:**
-  - Casos posibles: iluminación, cámara distinta, ángulo, oclusión, ruido,
-    dominio diferente.
-  - Debe diagnosticar y proponer mejoras.
-
-### Por definir
-
-- **Tipo de reto sugerido:** A/B (selección de causa) + I (propuesta de mejora)
-- **Enunciado final:** _(completar)_
-- **Recursos que se muestran:** _(completar — ¿ejemplos de imágenes que fallan?)_
-- **Opciones / respuesta correcta:** _(completar)_
-- **Pistas:**
-  - Pista 1: _(completar)_
-  - Pista 2: _(completar)_
-  - Pista 3: _(completar)_
-- **Feedback si acierta:** _(completar)_
-- **Feedback si no acierta:** _(completar)_
-- **Intentos máximos:** _(completar — sugerido: ilimitado)_
-- **Notas para el evaluador:** _(completar)_
+3 secciones: entrenamiento y curva de recompensa, comportamiento y reward
+hacking (política degenerada, ¿reward mayor implica mejor comportamiento?)
+y rediseño de la recompensa con reevaluación. Sin sección de reflexión
+final (el spec la excluye explícitamente de los nodos A4).
 
 ---
 
-## A4 — IA libre
+## A4_GENERAL — ¿Puedes salirte del dataset?
 
-**Estado en la app:** Reto libre · requiere A3A o A3B · no desbloquea nada más en esta rama
+**Estado en la app:** Reto libre · **BONUS** · requiere A3 · no bloquea el cierre de la prueba principal
 
-### Ya definido
+### Implementado
 
-- **Mini-descripción actual (panel de debug):** "Entrena, evalúa o
-  experimenta con un modelo de IA que te interese y documenta tus
-  resultados."
-- **De la especificación original:**
-  - Enunciado: "Entrena, evalúa o experimenta con un modelo de IA que te
-    interese."
-  - Entrega esperada: objetivo, datos, método, métricas, resultado,
-    limitaciones. No es obligatorio usar deep learning.
-
-### Por definir
-
-- **Tipo de reto sugerido:** J (reto libre, múltiples evidencias)
-- **Enunciado final:** _(completar)_
-- **Qué debe entregar exactamente:** _(completar)_
-- **Pistas:** _(completar, opcional)_
-- **Feedback al entregar:** _(completar)_
-- **Notas para el evaluador:** _(completar)_
+2 secciones: Nivel 1, generalización fuera del dataset (estrategia, evidencia
+fuera del dominio original —no se acepta solo el validation original—,
+nuevos falsos positivos, origen de la mejora), y Nivel 2, tracking eficiente
+(estrategia, video/evidencia y métricas), **completamente opcional** y que
+solo suma sobre el Nivel 1.

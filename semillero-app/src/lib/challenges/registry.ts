@@ -20,6 +20,11 @@ import {
   getIntegrationChallengeProgressDefinition,
 } from "@/lib/challenges/integration/registry";
 import {
+  AI_CHALLENGE_NODE_IDS,
+  AI_CHALLENGE_PROGRESS,
+  getAiChallengeProgressDefinition,
+} from "@/lib/challenges/ai/registry";
+import {
   FINAL_REFLECTION_STEP_ID,
   FINAL_SUBMISSION_NODE_ID,
 } from "@/lib/finalSubmission";
@@ -31,6 +36,7 @@ export const IMPLEMENTED_CHALLENGE_NODE_IDS = [
   ...MECHANICS_CHALLENGE_NODE_IDS,
   ...SYSTEMS_CHALLENGE_NODE_IDS,
   ...INTEGRATION_CHALLENGE_NODE_IDS,
+  ...AI_CHALLENGE_NODE_IDS,
 ] as const;
 
 export const IMPLEMENTED_CHALLENGE_PROGRESS: Readonly<
@@ -50,6 +56,7 @@ export const IMPLEMENTED_CHALLENGE_PROGRESS: Readonly<
   ...MECHANICS_CHALLENGE_PROGRESS,
   ...SYSTEMS_CHALLENGE_PROGRESS,
   ...INTEGRATION_CHALLENGE_PROGRESS,
+  ...AI_CHALLENGE_PROGRESS,
 };
 
 export function getChallengeProgressDefinition(
@@ -62,7 +69,8 @@ export function getChallengeProgressDefinition(
     getElectronicsChallengeProgressDefinition(nodeId) ??
     getMechanicsChallengeProgressDefinition(nodeId) ??
     getSystemsChallengeProgressDefinition(nodeId) ??
-    getIntegrationChallengeProgressDefinition(nodeId)
+    getIntegrationChallengeProgressDefinition(nodeId) ??
+    getAiChallengeProgressDefinition(nodeId)
   );
 }
 

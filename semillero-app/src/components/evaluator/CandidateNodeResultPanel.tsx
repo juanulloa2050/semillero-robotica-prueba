@@ -24,7 +24,7 @@ export function CandidateNodeResultPanel({ runId, node, progress, status, comple
     <aside className="absolute inset-y-3 right-3 z-20 flex w-[min(31rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_24px_70px_rgba(0,0,0,0.48)]" aria-label={`Resultados de ${node.title}`}>
       <header className="shrink-0 border-b border-line px-5 py-4" style={{ boxShadow: `inset 0 2px 0 ${color}` }}>
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{node.id} · {BRANCHES[node.branchId].name}</p><h3 className="mt-1 text-lg font-semibold leading-6 text-ink">{node.title}</h3></div>
+          <div className="min-w-0"><p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{node.id} · {BRANCHES[node.branchId].name}{node.bonus && <span className="rounded-full border border-cyan/40 bg-cyan/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.14em] text-cyan">Bonus</span>}</p><h3 className="mt-1 text-lg font-semibold leading-6 text-ink">{node.title}</h3></div>
           <button type="button" onClick={onClose} aria-label="Cerrar resultados" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-cyan/45 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"><CloseIcon /></button>
         </div>
         <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
@@ -56,7 +56,30 @@ export function CandidateNodeResultPanel({ runId, node, progress, status, comple
   );
 }
 
-function ResultBadge({ status }: { status: NodeStatus }) { const label = status === "completed" ? "Completado" : status === "available" ? "Con actividad" : "Sin actividad"; return <span className={`rounded-full border px-2.5 py-1 font-semibold ${status === "completed" ? "border-ok/30 bg-ok/10 text-ok" : status === "available" ? "border-cyan/30 bg-cyan/10 text-cyan" : "border-line bg-night/40 text-muted"}`}>{label}</span>; }
+function ResultBadge({ status }: { status: NodeStatus }) {
+  const label =
+    status === "completed"
+      ? "Completado"
+      : status === "in_progress"
+        ? "Con actividad"
+        : status === "available"
+          ? "Disponible, sin actividad"
+          : "Bloqueado";
+  const isOpen = status === "available" || status === "in_progress";
+  return (
+    <span
+      className={`rounded-full border px-2.5 py-1 font-semibold ${
+        status === "completed"
+          ? "border-ok/30 bg-ok/10 text-ok"
+          : isOpen
+            ? "border-cyan/30 bg-cyan/10 text-cyan"
+            : "border-line bg-night/40 text-muted"
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
 function AnswerStatus({ value }: { value: boolean | null }) { return <span className={value === null ? "text-cyan" : value ? "text-ok" : "text-danger"}>{value === null ? "Revisión manual" : value ? "Correcto" : "Incorrecto"}</span>; }
 function AnswerDetails({ value }: { value: JsonValue }) {
   if (value === "" || value === null) return <p className="mt-2 text-xs leading-5 text-muted">Sin respuesta.</p>;
