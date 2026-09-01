@@ -126,6 +126,8 @@ const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   A4_GENERAL: (props) => <AiNodeChallenge {...props} content={A4_GENERAL_CONTENT} />,
 };
 
+const WORK_IN_PROGRESS_NODE_IDS = new Set(["C0", "S0"]);
+
 export function NodeDetailPanel({
   node,
   status,
@@ -404,6 +406,10 @@ function ChallengeBody({
   const DetailedChallenge = DETAILED_CHALLENGE_COMPONENTS[node.id];
   const isOpen = status === "available" || status === "in_progress";
 
+  if (WORK_IN_PROGRESS_NODE_IDS.has(node.id)) {
+    return <WorkInProgressMessage node={node} onClose={onClose} />;
+  }
+
   if (DetailedChallenge && status !== "locked") {
     return (
       <div className={`min-h-0 flex-1 overscroll-contain ${
@@ -556,6 +562,58 @@ function ChallengeBody({
             )}
           </section>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function WorkInProgressMessage({
+  node,
+  onClose,
+}: {
+  node: SkillNodeDef;
+  onClose: () => void;
+}) {
+  const branch = BRANCHES[node.branchId];
+
+  return (
+    <div className="flex flex-1 items-center justify-center overflow-y-auto p-5 sm:p-8">
+      <div className="w-full max-w-xl rounded-3xl border border-cyan/20 bg-gradient-to-br from-[#0c2d47] to-[#092238] p-7 text-center shadow-[0_24px_70px_rgba(0,0,0,0.3)] sm:p-10">
+        <span
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border"
+          style={{
+            background: `${branch.color}18`,
+            borderColor: `${branch.color}45`,
+            color: branch.color,
+          }}
+        >
+          <PrototypeIcon />
+        </span>
+
+        <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan sm:text-xs">
+          Próximamente
+        </p>
+        <h2
+          id="skill-detail-title"
+          className="mt-3 text-balance font-heading text-3xl font-semibold leading-tight tracking-[-0.03em] text-ink sm:text-4xl"
+        >
+          Todavía estamos trabajando en este reto
+        </h2>
+        <p
+          id="skill-detail-description"
+          className="mx-auto mt-4 max-w-md text-sm leading-7 text-muted sm:text-base"
+        >
+          Estamos preparando la experiencia de {branch.name}. Muy pronto podrás
+          explorarla y completar sus desafíos.
+        </p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-8 inline-flex min-h-11 items-center justify-center rounded-xl bg-cyan px-6 py-3 text-sm font-semibold text-night transition-colors hover:bg-cyan/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
+        >
+          Volver al mapa
+        </button>
       </div>
     </div>
   );
