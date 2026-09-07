@@ -1,5 +1,10 @@
 import type { ChallengeProgressDefinition } from "@/lib/challenges/progress";
 import {
+  DESIGN_CHALLENGE_NODE_IDS,
+  DESIGN_CHALLENGE_PROGRESS,
+  getDesignChallengeProgressDefinition,
+} from "@/lib/challenges/design/registry";
+import {
   ELECTRONICS_CHALLENGE_NODE_IDS,
   ELECTRONICS_CHALLENGE_PROGRESS,
   getElectronicsChallengeProgressDefinition,
@@ -30,8 +35,8 @@ import {
 } from "@/lib/finalSubmission";
 
 export const IMPLEMENTED_CHALLENGE_NODE_IDS = [
-  "D0",
   FINAL_SUBMISSION_NODE_ID,
+  ...DESIGN_CHALLENGE_NODE_IDS,
   ...ELECTRONICS_CHALLENGE_NODE_IDS,
   ...MECHANICS_CHALLENGE_NODE_IDS,
   ...SYSTEMS_CHALLENGE_NODE_IDS,
@@ -42,16 +47,12 @@ export const IMPLEMENTED_CHALLENGE_NODE_IDS = [
 export const IMPLEMENTED_CHALLENGE_PROGRESS: Readonly<
   Record<string, ChallengeProgressDefinition>
 > = {
-  D0: {
-    nodeId: "D0",
-    stepIds: ["submission"],
-    maximumHintsByStep: { submission: 0 },
-  },
   [FINAL_SUBMISSION_NODE_ID]: {
     nodeId: FINAL_SUBMISSION_NODE_ID,
     stepIds: [FINAL_REFLECTION_STEP_ID],
     maximumHintsByStep: { [FINAL_REFLECTION_STEP_ID]: 0 },
   },
+  ...DESIGN_CHALLENGE_PROGRESS,
   ...ELECTRONICS_CHALLENGE_PROGRESS,
   ...MECHANICS_CHALLENGE_PROGRESS,
   ...SYSTEMS_CHALLENGE_PROGRESS,
@@ -62,10 +63,11 @@ export const IMPLEMENTED_CHALLENGE_PROGRESS: Readonly<
 export function getChallengeProgressDefinition(
   nodeId: string
 ): ChallengeProgressDefinition | null {
-  if (nodeId === "D0" || nodeId === FINAL_SUBMISSION_NODE_ID) {
+  if (nodeId === FINAL_SUBMISSION_NODE_ID) {
     return IMPLEMENTED_CHALLENGE_PROGRESS[nodeId];
   }
   return (
+    getDesignChallengeProgressDefinition(nodeId) ??
     getElectronicsChallengeProgressDefinition(nodeId) ??
     getMechanicsChallengeProgressDefinition(nodeId) ??
     getSystemsChallengeProgressDefinition(nodeId) ??
