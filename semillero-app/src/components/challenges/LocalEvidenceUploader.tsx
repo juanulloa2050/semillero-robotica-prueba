@@ -113,9 +113,23 @@ export function LocalEvidenceUploader({
         await removeEvidenceFile(value[0].id).catch(() => undefined);
       }
       onChange(multiple ? [...value, ...stored] : stored);
-    } catch {
+    } catch (uploadError) {
+      // El archivo puede fallar en el servidor (permisos, tamaño del bucket,
+      // red) y no sólo en este navegador: mostrar siempre lo mismo hacía
+      // imposible saber qué pasó.
+      const detail =
+        uploadError instanceof Error
+          ? uploadError.message
+          : typeof uploadError === "object" &&
+              uploadError !== null &&
+              "message" in uploadError
+            ? String((uploadError as { message: unknown }).message)
+            : "";
+      console.error("[semillero] No se pudo subir la evidencia:", uploadError);
       setError(
-        "No pudimos guardar el archivo en este navegador. Revisa el espacio disponible e inténtalo de nuevo."
+        detail
+          ? `No pudimos guardar el archivo: ${detail}`
+          : "No pudimos guardar el archivo. Revisa tu conexión e inténtalo de nuevo."
       );
     } finally {
       setBusy(false);

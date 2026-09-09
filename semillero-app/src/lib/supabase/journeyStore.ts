@@ -73,8 +73,16 @@ export async function saveRemoteJourney(
     .from("assessment_runs")
     .select("id,status")
     .eq("candidate_id", userId)
-    .single();
+    .maybeSingle<{ id: string; status: string }>();
   if (runError) throw runError;
+  if (!run) {
+    // Sin esta fila no hay dónde guardar: cada intento fallaría en silencio y
+    // el aspirante vería "Guardando…" para siempre.
+    throw new Error(
+      "No encontramos un recorrido abierto para esta cuenta. Recarga la página o escríbenos: tu avance no se está guardando en el servidor."
+    );
+  }
+  // Tras el envío el recorrido queda congelado a propósito: no es un error.
   if (run.status !== "draft") return;
 
   const profileResults = await Promise.all([
