@@ -70,7 +70,6 @@ const HANDLE_POSITION: Record<HandleSide, Position> = {
 /** Visual relationships only: they show where disciplines meet without
  * changing the prerequisite rules for either branch. */
 const HYBRID_LINKS = [
-  ["D2", "M2"],
   ["E2", "C2"],
   ["S2", "A2_YOLO"],
   ["C4", "SI4"],

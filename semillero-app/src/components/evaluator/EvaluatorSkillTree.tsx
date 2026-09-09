@@ -34,7 +34,7 @@ import type { AppState } from "@/lib/types";
 const nodeTypes = { skill: SkillNodeCard, laneHeader: LaneHeaderNode, traveler: TravelerCard };
 const edgeTypes = { lane: LaneEdge };
 const HANDLE_POSITION: Record<HandleSide, Position> = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };
-const HYBRID_LINKS = [["D2", "M2"], ["E2", "C2"], ["S2", "A2_YOLO"], ["C4", "SI4"], ["S3B", "SI4"], ["A3", "E3A"]] as const;
+const HYBRID_LINKS = [["E2", "C2"], ["S2", "A2_YOLO"], ["C4", "SI4"], ["S3B", "SI4"], ["A3", "E3A"]] as const;
 
 interface Props {
   runId: string;

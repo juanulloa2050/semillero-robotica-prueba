@@ -173,7 +173,20 @@ export function D0Challenge({ savedProgress, readOnly, onSave, onComplete, onExi
 }
 
 function createInitialProgress(saved?: NodeChallengeProgress): NodeChallengeProgress {
-  if (saved) return saved;
+  const emptyStep = {
+    draft: toJson(createD0Draft()),
+    attempts: [],
+    revealedHints: 0,
+    totalActiveSeconds: 0,
+    solvedAt: null,
+  };
+  if (saved) {
+    // Un recorrido guardado antes de este reto (o con otro paso) no trae
+    // `steps[STEP_ID]`, y leerlo directo rompía la pantalla al abrir el nodo.
+    return saved.steps?.[STEP_ID]
+      ? saved
+      : { ...saved, steps: { ...saved.steps, [STEP_ID]: emptyStep } };
+  }
   const now = Date.now();
   return {
     nodeId: NODE_ID,
