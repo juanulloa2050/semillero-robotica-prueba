@@ -41,7 +41,7 @@ export const D4_STEP_IDS = ["open-project"] as const satisfies readonly D4StepId
 export const D4_CHALLENGE = {
   id: "D4",
   title: "Diseña algo que exista",
-  subtitle: "Reto libre · Diseña una pieza, conjunto o mecanismo útil para un robot.",
+  subtitle: "Reto libre · Criterio de diseño y documentación",
   attempts: "unlimited",
   completionRule: "all_steps",
   steps: {

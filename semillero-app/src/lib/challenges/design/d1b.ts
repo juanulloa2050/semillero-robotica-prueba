@@ -22,8 +22,8 @@ const TOLERANCE = 0.02;
 
 export const D1B_CHALLENGE = {
   id: "D1B",
-  title: "El material también diseña",
-  subtitle: "Subhabilidad · Parametrización y propiedades físicas",
+  title: "Del plano al volumen",
+  subtitle: "Subhabilidad · Modelado y propiedades físicas",
   introduction:
     "Modela la pieza mostrada en el plano y reporta su volumen.",
   attempts: "unlimited",
