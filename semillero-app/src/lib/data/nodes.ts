@@ -36,20 +36,18 @@ function n(
 
 export const SKILL_NODES: SkillNodeDef[] = [
   // Diseño / CAD
-  n("D0", "design", 0, 0, "Entrega rápida", "fundamentos",
-    "Comparte cualquier archivo relacionado con una idea, proyecto o aprendizaje y cuéntanos brevemente qué representa.", []),
+  n("D0", "design", 0, 0, "Identifica las operaciones", "fundamentos",
+    "Observa una pieza terminada y selecciona qué operaciones de modelado se usaron para construirla.", []),
   n("D1A", "design", 1, -1, "Geometría bajo control", "sub",
     "Observa varios croquis e identifica cuál está completamente definido y qué restricción falta.", ["D0"]),
   n("D1B", "design", 1, 1, "El material también diseña", "sub",
     "Asigna un material real a tu pieza (por ejemplo aluminio 6061) y calcula su masa, volumen y centro de masa.", ["D0"]),
-  n("D2", "design", 2, 0, "Diseña menos, logra más", "aplicacion",
-    "Reduce al menos 15% la masa de tu pieza sin modificar las superficies de montaje, y explica tus decisiones.", ["D1A", "D1B"]),
-  n("D3A", "design", 3, -1, "Diseña para imprimir", "profundizacion",
-    "Se presenta una pieza problemática para impresión 3D: identifica y corrige los problemas de manufactura aditiva.", ["D2"]),
-  n("D3B", "design", 3, 1, "Diseña para fabricar y ensamblar", "profundizacion",
-    "Detecta problemas de manufactura y ensamble en una pieza (tornillos inaccesibles, tolerancias imposibles) y corrígelos.", ["D2"]),
-  n("D4", "design", 4, 0, "Diseña algo que exista", "libre",
-    "Diseña una pieza, conjunto o mecanismo que consideres útil para un robot y documenta tu proceso.", ["D3A", "D3B"]),
+  n("D1C", "design", 1, 0, "Vistas técnicas y Tool Block", "sub",
+    "Identifica el tipo de vista de dibujo correcto y construye/modifica una pieza en varios pasos, reportando su masa en cada uno.", ["D0"]),
+  n("D4", "design", 2, 0, "Diseña algo que exista", "libre",
+    "Diseña una pieza, conjunto o mecanismo que consideres útil para un robot y documenta tu proceso.", []),
+  n("D5", "design", 0, 2, "Muéstranos tu mejor trabajo", "libre",
+    "Comparte un modelo CAD propio que ya hayas hecho y cuéntanos qué es, qué problema resolvía y qué fue lo más difícil.", []),
 
   // Mecánica
   n("M0", "mechanics", 0, 0, "Piensa como un mecanismo", "fundamentos",
@@ -168,7 +166,6 @@ export const IR_NODE: SkillNodeDef = n(
 );
 
 export const APPLICATION_NODE_IDS: ReadonlyArray<string | readonly string[]> = [
-  "D2",
   "M2",
   "E2",
   "C2",

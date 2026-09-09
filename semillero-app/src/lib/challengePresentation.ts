@@ -27,10 +27,9 @@ const CHALLENGE_KINDS_BY_ID: Record<string, readonly ChallengeKind[]> = {
   D0: ["C", "H"],
   D1A: ["A", "E"],
   D1B: ["C"],
-  D2: ["H", "C", "I"],
-  D3A: ["B", "H"],
-  D3B: ["B", "I", "H"],
+  D1C: ["A", "C"],
   D4: ["J"],
+  D5: ["J"],
 
   M0: ["G", "A", "B"],
   M1A: ["C", "A"],
