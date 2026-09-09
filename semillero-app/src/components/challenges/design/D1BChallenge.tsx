@@ -7,8 +7,6 @@ import {
   evaluateD1B,
   type D1BSubmission,
 } from "@/lib/challenges/design/d1b";
-import { LocalEvidenceUploader } from "@/components/challenges/LocalEvidenceUploader";
-import type { LocalEvidenceFile } from "@/lib/challenges/evidenceStore";
 import {
   DesignChallengeShell,
   DesignFooter,
@@ -50,9 +48,9 @@ export function D1BChallenge({ savedProgress, readOnly, onSave, onComplete, onEx
     onSaveRef.current(next);
   }, []);
 
-  function changeDraft(patch: Partial<Omit<D1BSubmission, "stepId">>) {
+  function changeValue(value: string) {
     if (readOnly || solved) return;
-    const nextDraft: D1BSubmission = { ...draft, ...patch, stepId: "volume" };
+    const nextDraft: D1BSubmission = { stepId: "volume", value };
     const next: NodeChallengeProgress = {
       ...progressRef.current,
       updatedAt: Date.now(),
@@ -81,6 +79,7 @@ export function D1BChallenge({ savedProgress, readOnly, onSave, onComplete, onEx
   function submit() {
     if (readOnly || solved) return;
     const evaluation = evaluateD1B(draft);
+    // eslint-disable-next-line react-hooks/purity -- submit() is an event handler, not render logic.
     const now = Date.now();
     const current = progressRef.current.steps[STEP_ID];
     const attempt: ChallengeAttempt = {
@@ -151,27 +150,13 @@ export function D1BChallenge({ savedProgress, readOnly, onSave, onComplete, onEx
               autoComplete="off"
               value={draft.value}
               disabled={readOnly || solved}
-              onChange={(e) => changeDraft({ value: e.target.value })}
+              onChange={(e) => changeValue(e.target.value)}
               placeholder="Ej. 123456789"
               className="w-full rounded-lg border border-white/15 bg-[#03152f] px-3 py-2 font-mono text-sm text-white outline-none focus:border-[#8CA0F0] disabled:opacity-60"
               style={{ borderColor: undefined }}
             />
           </div>
           <p className="mt-2 text-xs text-slate-400">Tolerancia de ±2% sobre el valor de referencia.</p>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
-          <LocalEvidenceUploader
-            nodeId={NODE_ID}
-            fieldId="model"
-            label={D1B_CHALLENGE.steps.volume.evidence.label}
-            description={D1B_CHALLENGE.steps.volume.evidence.description}
-            accept={D1B_CHALLENGE.steps.volume.evidence.accept}
-            value={[...draft.files]}
-            onChange={(files: LocalEvidenceFile[]) => changeDraft({ files })}
-            disabled={readOnly || solved}
-            required
-          />
         </div>
 
         {lastResult && <DesignResultBanner isCorrect={lastResult.isCorrect} message={lastResult.message} />}
@@ -187,7 +172,7 @@ export function D1BChallenge({ savedProgress, readOnly, onSave, onComplete, onEx
       <DesignFooter
         solved={solved}
         readOnly={readOnly}
-        canSubmit={draft.value.trim().length > 0 && draft.files.length > 0}
+        canSubmit={draft.value.trim().length > 0}
         submitLabel={totalAttempts > 0 ? "Comprobar de nuevo" : "Comprobar respuesta"}
         onSubmit={submit}
         onExit={onExit}
@@ -234,19 +219,11 @@ function createInitialProgress(saved?: NodeChallengeProgress): NodeChallengeProg
 
 function normalizeDraft(raw: JsonValue): D1BSubmission {
   if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as { value?: unknown }).value === "string") {
-    // `files` no existía en la primera versión del reto, así que un borrador
-    // guardado antes puede no traerlo.
-    const rawFiles = (raw as { files?: unknown }).files;
-    const files = Array.isArray(rawFiles) ? (rawFiles as LocalEvidenceFile[]) : [];
-    return { stepId: "volume", value: (raw as { value: string }).value, files };
+    return { stepId: "volume", value: (raw as { value: string }).value };
   }
   return createD1BDraft();
 }
 
 function toJson(value: D1BSubmission): JsonValue {
-  return {
-    stepId: value.stepId,
-    value: value.value,
-    files: value.files.map((file) => ({ ...file })) as unknown as JsonValue,
-  } as JsonValue;
+  return { stepId: value.stepId, value: value.value };
 }

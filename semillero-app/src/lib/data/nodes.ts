@@ -41,11 +41,13 @@ export const SKILL_NODES: SkillNodeDef[] = [
   n("D1A", "design", 1, -2, "Geometría bajo control", "sub",
     "Observa varios croquis e identifica cuál está completamente definido y qué restricción falta.", ["D0"]),
   n("D1B", "design", 1, 2, "Del plano al volumen", "sub",
-    "Modela en CAD la pieza que aparece en el plano, reporta su volumen y entrega el archivo de tu modelo.", ["D0"]),
+    "Modela en CAD la pieza que aparece en el plano y reporta su volumen con una tolerancia del ±2%.", ["D0"]),
   n("D1C", "design", 1, 0, "Vistas técnicas y Tool Block", "sub",
     "Identifica el tipo de vista de dibujo correcto y construye/modifica una pieza en varios pasos, reportando su masa en cada uno.", ["D0"]),
-  n("D4", "design", 2, 0, "Diseña algo que exista", "libre",
-    "Reto libre: propón tu propio diseño para un robot y documenta las decisiones detrás de él.", []),
+  n("D2", "design", 2, 0, "Entrega tus modelos CAD", "aplicacion",
+    "Reúne los archivos CAD de los retos que resolviste y entrégalos con una explicación de cómo los construiste.", ["D1A", "D1B", "D1C"]),
+  n("D4", "design", 3, 0, "Diseña algo que exista", "libre",
+    "Reto libre: propón tu propio diseño para un robot y documenta las decisiones detrás de él.", ["D2"]),
   n("D5", "design", 0, 2, "Muéstranos tu mejor trabajo", "libre",
     "Comparte un modelo CAD propio que ya hayas hecho y cuéntanos qué es, qué problema resolvía y qué fue lo más difícil.", []),
 
@@ -166,6 +168,7 @@ export const IR_NODE: SkillNodeDef = n(
 );
 
 export const APPLICATION_NODE_IDS: ReadonlyArray<string | readonly string[]> = [
+  "D2",
   "M2",
   "E2",
   "C2",
