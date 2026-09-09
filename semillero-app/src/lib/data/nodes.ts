@@ -38,10 +38,10 @@ export const SKILL_NODES: SkillNodeDef[] = [
   // Diseño / CAD
   n("D0", "design", 0, 0, "Identifica las operaciones", "fundamentos",
     "Observa una pieza terminada y selecciona qué operaciones de modelado se usaron para construirla.", []),
-  n("D1A", "design", 1, -1, "Geometría bajo control", "sub",
+  n("D1A", "design", 1, -2, "Geometría bajo control", "sub",
     "Observa varios croquis e identifica cuál está completamente definido y qué restricción falta.", ["D0"]),
-  n("D1B", "design", 1, 1, "Del plano al volumen", "sub",
-    "Modela en CAD la pieza que aparece en el plano y reporta su volumen con una tolerancia del ±2%.", ["D0"]),
+  n("D1B", "design", 1, 2, "Del plano al volumen", "sub",
+    "Modela en CAD la pieza que aparece en el plano, reporta su volumen y entrega el archivo de tu modelo.", ["D0"]),
   n("D1C", "design", 1, 0, "Vistas técnicas y Tool Block", "sub",
     "Identifica el tipo de vista de dibujo correcto y construye/modifica una pieza en varios pasos, reportando su masa en cada uno.", ["D0"]),
   n("D4", "design", 2, 0, "Diseña algo que exista", "libre",

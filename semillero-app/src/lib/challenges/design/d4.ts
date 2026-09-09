@@ -62,7 +62,7 @@ export const D4_CHALLENGE = {
       ],
       acceptedEvidence: {
         view: ".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf",
-        cad: ".zip,.step,.stp,.iges,.igs,.sldprt,.sldasm,.f3d,.fcstd,.pdf,application/zip",
+        cad: ".zip,.step,.stp,.iges,.igs,.sldprt,.sldasm,.f3d,.f3z,.ipt,.iam,.fcstd,.pdf,application/zip",
       },
     },
   },

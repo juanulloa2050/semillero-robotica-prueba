@@ -47,7 +47,7 @@ export const D5_CHALLENGE = {
         files: 1,
       },
       acceptedEvidence: {
-        work: ".zip,.step,.stp,.iges,.igs,.sldprt,.sldasm,.f3d,.fcstd,.png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf,application/zip",
+        work: ".zip,.step,.stp,.iges,.igs,.sldprt,.sldasm,.f3d,.f3z,.ipt,.iam,.fcstd,.png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf,application/zip",
       },
     },
   },
