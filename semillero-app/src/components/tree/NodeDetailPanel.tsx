@@ -18,6 +18,7 @@ import { E3AChallenge } from "@/components/challenges/electronics/E3AChallenge";
 import { E3BChallenge } from "@/components/challenges/electronics/E3BChallenge";
 import { E4Challenge } from "@/components/challenges/electronics/E4Challenge";
 import { SystemsChallenge } from "@/components/challenges/systems/SystemsChallenge";
+import { SoftwareChallenge } from "@/components/challenges/software/SoftwareChallenge";
 import { BranchIcon } from "@/components/icons/BranchIcon";
 import {
   DELIVERY_FORMAT_LABELS,
@@ -83,6 +84,13 @@ const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   SI4: (props) => <SystemsChallenge {...props} nodeId="SI4" />,
   SI5: (props) => <SystemsChallenge {...props} nodeId="SI5" />,
   SI6: (props) => <SystemsChallenge {...props} nodeId="SI6" />,
+  S0: (props) => <SoftwareChallenge {...props} nodeId="S0" />,
+  S1A: (props) => <SoftwareChallenge {...props} nodeId="S1A" />,
+  S1B: (props) => <SoftwareChallenge {...props} nodeId="S1B" />,
+  S2: (props) => <SoftwareChallenge {...props} nodeId="S2" />,
+  S3A: (props) => <SoftwareChallenge {...props} nodeId="S3A" />,
+  S3B: (props) => <SoftwareChallenge {...props} nodeId="S3B" />,
+  S4: (props) => <SoftwareChallenge {...props} nodeId="S4" />,
 };
 
 export function NodeDetailPanel({
