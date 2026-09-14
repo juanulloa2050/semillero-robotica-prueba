@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAppState } from "@/lib/state/AppStateContext";
+import { isTesterEmail, useTesterSession } from "@/lib/tester/session";
 import { EASE_OUT } from "@/lib/motion";
 import {
   canAccessSkillTree,
@@ -267,12 +268,23 @@ const ghostBtn = "rounded-lg px-5 py-2.5 text-sm font-medium text-muted transiti
 function StepDatos({ onNext }: { onNext: () => void }) {
   const { state, updateProfile } = useAppState();
   const auth = useAuth();
+  const { activateTester } = useTesterSession();
+  const router = useRouter();
   const [attempted, setAttempted] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [creatingAccount, setCreatingAccount] = useState(false);
   const p = state.profile;
+
+  function handleEmailChange(value: string) {
+    if (isTesterEmail(value)) {
+      activateTester();
+      router.replace("/skills");
+      return;
+    }
+    updateProfile({ email: value });
+  }
 
   const fullNameValid = Boolean(p.fullName.trim());
   const emailValid = isUnisabanaEmail(p.email);
@@ -374,7 +386,7 @@ function StepDatos({ onNext }: { onNext: () => void }) {
             }`}
             className={`${inputClass} ${emailError ? invalidInputClass : ""}`}
             value={p.email}
-            onChange={(e) => updateProfile({ email: e.target.value })}
+            onChange={(e) => handleEmailChange(e.target.value)}
             onBlur={() => touch("email")}
             placeholder="nombre.apellido@unisabana.edu.co"
           />

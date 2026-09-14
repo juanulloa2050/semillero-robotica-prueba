@@ -2345,7 +2345,7 @@ Cuando cumple el mínimo de exploración, el nodo central empieza a pulsar sutil
 Regla mínima recomendada:
 
 ```text
-5 nodos completados
+4 nodos completados
 +
 progreso en al menos 2 ramas diferentes
 ```
@@ -3375,159 +3375,22 @@ Ejemplos:
 
 # 67. Catálogo definitivo — Inteligencia Artificial
 
-## A0 — Limpia antes de aprender
-
-**Tipo:** Fundamentos  
-**Qué evalúa:** intuición sobre datos.
-
-### Reto
-
-Encontrar:
-
-- duplicados;
-- etiquetas incorrectas;
-- desbalance;
-- contaminación train/test;
-- muestras malas.
-
-### Desbloquea
-
-- A1A
-- A1B
-
----
-
-## A1A — ¿Qué significa funcionar?
-
-**Tipo:** Subhabilidad — Métricas  
-**Qué evalúa:** interpretación, no memorización.
-
-### Reto
-
-A partir de matriz de confusión o escenario seleccionar qué métrica importa.
-
-Ejemplo:
-
-`En rescate, ¿qué error te preocupa más al detectar personas?`
-
-### Desbloquea
-
-A2.
-
----
-
-## A1B — Prepara los datos
-
-**Tipo:** Subhabilidad — Preprocesamiento  
-**Qué evalúa:** preparación.
-
-### Reto
-
-Elegir o aplicar:
-
-- augmentation;
-- resize;
-- normalización;
-- balanceo;
-- limpieza.
-
-### Desbloquea
-
-A2.
-
----
-
-## A2 — Entrena algo real
-
-**Tipo:** Aplicación  
-**Qué evalúa:** capacidad de completar ciclo de ML.
-
-### Herramientas posibles
-
-- Edge Impulse;
-- Teachable Machine;
-- notebook preparado;
-- herramienta propia.
-
-### Entrega
-
-- captura;
-- métrica;
-- modelo o enlace;
-- explicación.
-
-### Desbloquea
-
-- A3A
-- A3B
-
----
-
-## A3A — El mejor modelo depende del robot
-
-**Tipo:** Profundización — Deployment  
-**Qué evalúa:** trade-offs.
-
-### Reto
-
-Comparar modelos por:
-
-- accuracy;
-- latencia;
-- RAM;
-- tamaño;
-- consumo.
-
-Elegir según hardware objetivo.
-
-### Conecta con
-
-SI6 y E3A.
-
-### Desbloquea
-
-A4.
-
----
-
-## A3B — ¿Por qué falló fuera del laboratorio?
-
-**Tipo:** Profundización — Generalización  
-**Qué evalúa:** robustez.
-
-### Casos
-
-- iluminación;
-- cámara distinta;
-- ángulo;
-- oclusión;
-- ruido;
-- dominio diferente.
-
-Debe diagnosticar y proponer mejoras.
-
-### Desbloquea
-
-A4.
-
----
-
-## A4 — IA libre
-
-**Tipo:** Reto libre
-
-### Enunciado
-
-`Entrena, evalúa o experimenta con un modelo de IA que te interese.`
-
-Debe entregar:
-
-- objetivo;
-- datos;
-- método;
-- métricas;
-- resultado;
-- limitaciones.
+> **Reemplazado.** El catálogo genérico A0 → A1A/A1B → A2 → A3A/A3B → A4
+> descrito originalmente en esta sección ya no refleja lo implementado.
+> La rama de IA fue rediseñada por completo alrededor de un único problema
+> —detección de una pelota de tenis de mesa— siguiendo
+> `ESPECIFICACION_PRUEBA_IA_ROBOTICA_NODOS_v2.md` (raíz del repositorio).
+>
+> La estructura vigente es:
+>
+> ```text
+> A0 → A1 → { A2_YOLO ‖ A2_OPENCV } → A3 → { A4_RL BONUS ‖ A4_GENERAL BONUS }
+> ```
+>
+> Para el catálogo detallado de lo implementado (contenido real de cada
+> nodo, campos, evidencias y decisiones de diseño), ver
+> [`retos/06-inteligencia-artificial.md`](./retos/06-inteligencia-artificial.md)
+> — ese documento describe el código, no un plan.
 
 ---
 
@@ -3821,7 +3684,7 @@ Opciones:
 
 ### Conecta con
 
-A3A, S4 e IR.
+A3 (IA), S4 e IR.
 
 ---
 
@@ -3872,7 +3735,7 @@ COMUNICACIÓN ROBÓTICA
 ## 69.4 Percepción desplegada
 
 ```text
-A3A Modelo vs hardware
+A3 Stress test y comparación
 +
 SI6 Deployment
 ↓
@@ -3898,7 +3761,7 @@ DISEÑO MECATRÓNICO
 ## 69.6 Sistema autónomo
 
 ```text
-A2 Entrenamiento
+A2-YOLO Entrenamiento
 +
 S2 Máquina de estados
 +
@@ -3938,7 +3801,7 @@ Ejemplos:
 
 - D2 + M2;
 - E2 + S2;
-- A2 + S2.
+- A2-YOLO + S2.
 
 ### Ruta especialista
 
@@ -3949,7 +3812,7 @@ Ejemplo:
 ```text
 S3B
 +
-A1A
+A1
 +
 SI1A
 ```
@@ -4075,6 +3938,7 @@ Texto:
 
 ## Preguntas guía
 
+- ¿Por qué quieres pertenecer al Semillero de Robótica?
 - ¿Quién eres y qué parte de tu perfil te gustaría que recordáramos?
 - ¿Qué rama disfrutaste más?
 - ¿Cuál fue el reto que más te costó?
@@ -4085,21 +3949,21 @@ Texto:
 
 ## Formato
 
-Video obligatorio grabado desde la plataforma.
+Video obligatorio adjuntado por el aspirante. El archivo es privado y solo
+puede consultarlo el equipo evaluador.
 
 Duración recomendada:
 
-`1–3 minutos`
+`2–4 minutos`
 
 ## Controles
 
-- `Comenzar grabación`
-- `Detener`
+- `Seleccionar video`
 - `Reproducir`
-- `Volver a grabar`
-- `Usar este video`
+- `Reemplazar video`
+- `Eliminar video`
 
-Se puede configurar fallback de subida manual si el navegador no permite captura.
+Formatos de video compatibles, con un tamaño máximo de 50 MB.
 
 ---
 
@@ -4193,14 +4057,13 @@ S0
 ```
 
 ```text
-IA
+IA (ver ESPECIFICACION_PRUEBA_IA_ROBOTICA_NODOS_v2.md — reemplaza este catálogo genérico)
 A0
-├── A1A
-├── A1B
-└── A2
-    ├── A3A
-    ├── A3B
-    └── A4
+└── A1
+    ├── A2_YOLO ─┐
+    └── A2_OPENCV┴── A3 (requiere AMBAS)
+                     ├── A4_RL (bonus)
+                     └── A4_GENERAL (bonus)
 
 7 nodos
 ```

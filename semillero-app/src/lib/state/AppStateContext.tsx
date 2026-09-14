@@ -16,7 +16,7 @@ import type {
   NodeChallengeProgress,
   NodeStatus,
 } from "@/lib/types";
-import { canFinishJourney, computeStatus } from "@/lib/unlock";
+import { canFinishJourney, computeStatus, isOpenForCompletion } from "@/lib/unlock";
 import { isValidCandidateProfile } from "@/lib/admissions";
 import {
   IMPLEMENTED_CHALLENGE_NODE_IDS,
@@ -32,6 +32,10 @@ import {
 } from "@/lib/challenges/progress";
 import { clearAllEvidenceFiles } from "@/lib/challenges/evidenceStore";
 import { nodeById } from "@/lib/data/nodes";
+import {
+  FINAL_SUBMISSION_NODE_ID,
+  hasFinalReflectionVideo,
+} from "@/lib/finalSubmission";
 import { useAuth } from "@/lib/auth/AuthContext";
 import {
   loadRemoteJourney,
@@ -40,6 +44,21 @@ import {
 
 const STORAGE_KEY = "semillero-app-state-v1";
 const SESSION_KEY = "semillero-session-active";
+
+/**
+ * Los fallos de guardado se mostraban sólo como "Sin guardar", sin rastro de la
+ * causa. Sin esto es imposible distinguir un problema de red, de permisos o de
+ * cuota, tanto para el aspirante como para quien depura el reporte.
+ */
+function reportSaveFailure(action: string, error: unknown): void {
+  const detail =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
+  console.error(`[semillero] No se pudo ${action}: ${detail}`, error);
+}
 
 const emptyProfile: CandidateProfile = {
   fullName: "",
@@ -332,11 +351,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         setSessionActive(true);
         setHydrated(true);
         if (canImportLocal && auth.user) {
-          void saveRemoteJourney(auth.user.id, local).catch(() => setSaveStatus("error"));
+          void saveRemoteJourney(auth.user.id, local).catch((error) => {
+            reportSaveFailure("importar el avance local", error);
+            setSaveStatus("error");
+          });
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active) return;
+        reportSaveFailure("cargar el recorrido guardado", error);
         setSaveStatus("error");
         setSessionActive(true);
         setHydrated(true);
@@ -362,11 +385,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (auth.configured && auth.user && auth.role === "candidate") {
         void saveRemoteJourney(auth.user.id, snapshot)
           .then(() => setSaveStatus("saved"))
-          .catch(() => setSaveStatus("error"));
+          .catch((error) => {
+            reportSaveFailure("guardar el avance en el servidor", error);
+            setSaveStatus("error");
+          });
       } else {
         setSaveStatus("saved");
       }
-    } catch {
+    } catch (error) {
+      reportSaveFailure("guardar el avance en este navegador", error);
       setSaveStatus("error");
     }
   }, [auth.configured, auth.role, auth.user]);
@@ -518,7 +545,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           normalized.nodeId !== nodeId ||
           prev.submitted ||
           !isValidCandidateProfile(prev.profile) ||
-          computeStatus(nodeId, prev.progress) !== "available"
+          !isOpenForCompletion(computeStatus(nodeId, prev.progress, prev.challengeProgress))
         ) {
           return prev;
         }
@@ -557,7 +584,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         prev.submitted ||
         !isValidCandidateProfile(prev.profile) ||
         isImplementedChallengeNodeId(nodeId) ||
-        computeStatus(nodeId, prev.progress) !== "available"
+        !isOpenForCompletion(computeStatus(nodeId, prev.progress, prev.challengeProgress))
       ) {
         return prev;
       }
@@ -574,7 +601,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (
         prev.submitted ||
         !isValidCandidateProfile(prev.profile) ||
-        !canFinishJourney(prev.progress)
+        !canFinishJourney(prev.progress) ||
+        !hasFinalReflectionVideo(
+          prev.challengeProgress[FINAL_SUBMISSION_NODE_ID]
+        )
       ) {
         return prev;
       }

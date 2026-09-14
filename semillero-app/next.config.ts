@@ -5,15 +5,16 @@ import type { NextConfig } from "next";
 // user/org root page), so every asset and route needs the repo name as a
 // base path — otherwise CSS/JS/fonts 404 once deployed.
 const repoBasePath = "/semillero-robotica-prueba";
+const publicBasePath = process.env.NODE_ENV === "production" ? repoBasePath : "";
 
 const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   allowedDevOrigins: ["127.0.0.1"],
-  basePath: repoBasePath,
-  assetPrefix: repoBasePath,
+  basePath: publicBasePath,
+  assetPrefix: publicBasePath,
   env: {
-    NEXT_PUBLIC_BASE_PATH: repoBasePath,
+    NEXT_PUBLIC_BASE_PATH: publicBasePath,
   },
   images: {
     unoptimized: true,

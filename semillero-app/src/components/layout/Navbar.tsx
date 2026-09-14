@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getJourneyDestination } from "@/lib/journey";
 import { useAppState } from "@/lib/state/AppStateContext";
+import { useEvaluatorSession } from "@/lib/evaluator/session";
+import { useTesterSession } from "@/lib/tester/session";
 import { SaveIndicator } from "./SaveIndicator";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -51,8 +53,11 @@ export function Navbar() {
   const pathname = usePathname();
   const auth = useAuth();
   const { state, hydrated, startSession } = useAppState();
+  const { evaluator, logout: evaluatorLogout } = useEvaluatorSession();
+  const { testerActive, deactivateTester } = useTesterSession();
   const isLanding = pathname === "/";
   const isLogin = pathname === "/login";
+  const isEvaluator = pathname.startsWith("/evaluador");
   const isPublic = isLanding || isLogin;
   const hasSavedJourney = hydrated && getJourneyDestination(state).isReturning;
   const routeContext =
@@ -105,6 +110,40 @@ export function Navbar() {
               </Link>
             )}
           </nav>
+        ) : isEvaluator ? (
+          <nav aria-label="Panel de evaluación" className="flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
+            {evaluator && (
+              <span className="hidden text-muted sm:inline">Evaluador: {evaluator.username}</span>
+            )}
+            <Link
+              href="/"
+              className="rounded-lg px-2.5 py-2 text-muted transition-colors hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan sm:px-3"
+            >
+              Volver al inicio
+            </Link>
+            {evaluator && (
+              <Link
+                href="/evaluador/login"
+                onClick={evaluatorLogout}
+                className="rounded-lg border border-cyan/25 bg-cyan/5 px-3 py-2 font-semibold text-cyan transition-colors hover:border-cyan/45 hover:bg-cyan/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
+              >
+                Cerrar sesión
+              </Link>
+            )}
+          </nav>
+        ) : testerActive ? (
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="rounded-full border border-cyan/40 bg-cyan/10 px-2.5 py-1 text-[11px] font-semibold text-cyan">
+              Modo tester · solo lectura
+            </span>
+            <Link
+              href="/"
+              onClick={deactivateTester}
+              className="rounded-lg border border-line px-2.5 py-2 text-[11px] font-semibold text-muted transition-colors hover:border-cyan/40 hover:text-ink"
+            >
+              Salir
+            </Link>
+          </div>
         ) : (
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <p

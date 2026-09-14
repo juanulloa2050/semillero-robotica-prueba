@@ -33,9 +33,11 @@ export interface SkillNodeDef {
   typeLabel: string;
   description: string;
   requires: string[];
+  /** Marks an optional node that does not gate branch/journey completion. */
+  bonus?: boolean;
 }
 
-export type NodeStatus = "locked" | "available" | "completed";
+export type NodeStatus = "locked" | "available" | "in_progress" | "completed";
 
 export interface CandidateProfile {
   fullName: string;

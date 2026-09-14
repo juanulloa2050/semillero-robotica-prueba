@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useAppState } from "@/lib/state/AppStateContext";
 import { getJourneyDestination } from "@/lib/journey";
+import { isTesterEmail, useTesterSession } from "@/lib/tester/session";
 
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { state, startSession } = useAppState();
+  const { activateTester } = useTesterSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +35,12 @@ export default function LoginPage() {
     setError("");
     setNotice("");
     const normalized = email.trim().toLowerCase();
+
+    if (isTesterEmail(normalized)) {
+      activateTester();
+      router.replace("/skills");
+      return;
+    }
 
     if (!auth.configured) {
       const storedEmail = state.profile.email.trim().toLowerCase();

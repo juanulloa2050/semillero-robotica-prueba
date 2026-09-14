@@ -19,6 +19,29 @@ import { E3BChallenge } from "@/components/challenges/electronics/E3BChallenge";
 import { E4Challenge } from "@/components/challenges/electronics/E4Challenge";
 import { SystemsChallenge } from "@/components/challenges/systems/SystemsChallenge";
 import { SoftwareChallenge } from "@/components/challenges/software/SoftwareChallenge";
+import { D0Challenge } from "@/components/challenges/design/D0Challenge";
+import { D1AChallenge } from "@/components/challenges/design/D1AChallenge";
+import { D1BChallenge } from "@/components/challenges/design/D1BChallenge";
+import { D1CChallenge } from "@/components/challenges/design/D1CChallenge";
+import { D2Challenge } from "@/components/challenges/design/D2Challenge";
+import { D4Challenge } from "@/components/challenges/design/D4Challenge";
+import { D5Challenge } from "@/components/challenges/design/D5Challenge";
+import { M0Challenge } from "@/components/challenges/mechanics/M0Challenge";
+import { M1AChallenge } from "@/components/challenges/mechanics/M1AChallenge";
+import { M1BChallenge } from "@/components/challenges/mechanics/M1BChallenge";
+import { M2Challenge } from "@/components/challenges/mechanics/M2Challenge";
+import { M3AChallenge } from "@/components/challenges/mechanics/M3AChallenge";
+import { M3BChallenge } from "@/components/challenges/mechanics/M3BChallenge";
+import { M4Challenge } from "@/components/challenges/mechanics/M4Challenge";
+import { IRChallenge } from "@/components/challenges/integration/IRChallenge";
+import { AiNodeChallenge } from "@/components/challenges/ai/AiNodeChallenge";
+import { A0_CONTENT } from "@/lib/challenges/ai/a0";
+import { A1_CONTENT } from "@/lib/challenges/ai/a1";
+import { A2_YOLO_CONTENT } from "@/lib/challenges/ai/a2-yolo";
+import { A2_OPENCV_CONTENT } from "@/lib/challenges/ai/a2-opencv";
+import { A3_CONTENT } from "@/lib/challenges/ai/a3";
+import { A4_RL_CONTENT } from "@/lib/challenges/ai/a4-rl";
+import { A4_GENERAL_CONTENT } from "@/lib/challenges/ai/a4-general";
 import { BranchIcon } from "@/components/icons/BranchIcon";
 import {
   DELIVERY_FORMAT_LABELS,
@@ -43,6 +66,12 @@ const STATUS_COPY: Record<
     detail:
       "Cuando registres tu entrega, este reto quedará completado y podrá abrir nuevas rutas.",
   },
+  in_progress: {
+    label: "En progreso",
+    eyebrow: "Tienes progreso guardado",
+    detail:
+      "Guardaste avances en este reto. Continúa donde lo dejaste para completarlo.",
+  },
   completed: {
     label: "Completado",
     eyebrow: "Entrega registrada",
@@ -57,6 +86,8 @@ const STATUS_COPY: Record<
   },
 };
 
+function NOOP() {}
+
 interface DetailedChallengeProps {
   savedProgress?: NodeChallengeProgress;
   readOnly: boolean;
@@ -68,6 +99,13 @@ interface DetailedChallengeProps {
 const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   Record<string, ComponentType<DetailedChallengeProps>>
 > = {
+  D0: D0Challenge,
+  D1A: D1AChallenge,
+  D1B: D1BChallenge,
+  D1C: D1CChallenge,
+  D2: D2Challenge,
+  D4: D4Challenge,
+  D5: D5Challenge,
   E0: E0Challenge,
   E1A: E1AChallenge,
   E1B: E1BChallenge,
@@ -91,7 +129,24 @@ const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   S3A: (props) => <SoftwareChallenge {...props} nodeId="S3A" />,
   S3B: (props) => <SoftwareChallenge {...props} nodeId="S3B" />,
   S4: (props) => <SoftwareChallenge {...props} nodeId="S4" />,
+  M0: M0Challenge,
+  M1A: M1AChallenge,
+  M1B: M1BChallenge,
+  M2: M2Challenge,
+  M3A: M3AChallenge,
+  M3B: M3BChallenge,
+  M4: M4Challenge,
+  IR: IRChallenge,
+  A0: (props) => <AiNodeChallenge {...props} content={A0_CONTENT} />,
+  A1: (props) => <AiNodeChallenge {...props} content={A1_CONTENT} />,
+  A2_YOLO: (props) => <AiNodeChallenge {...props} content={A2_YOLO_CONTENT} />,
+  A2_OPENCV: (props) => <AiNodeChallenge {...props} content={A2_OPENCV_CONTENT} />,
+  A3: (props) => <AiNodeChallenge {...props} content={A3_CONTENT} />,
+  A4_RL: (props) => <AiNodeChallenge {...props} content={A4_RL_CONTENT} />,
+  A4_GENERAL: (props) => <AiNodeChallenge {...props} content={A4_GENERAL_CONTENT} />,
 };
+
+const WORK_IN_PROGRESS_NODE_IDS = new Set(["C0", "S0"]);
 
 export function NodeDetailPanel({
   node,
@@ -102,6 +157,7 @@ export function NodeDetailPanel({
   challengeProgress,
   onSaveChallengeProgress,
   onCompleteChallenge,
+  testerMode = false,
 }: {
   node: SkillNodeDef | null;
   status: NodeStatus;
@@ -117,6 +173,7 @@ export function NodeDetailPanel({
     nodeId: string,
     progress: NodeChallengeProgress
   ) => void;
+  testerMode?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
@@ -262,6 +319,7 @@ export function NodeDetailPanel({
               onClose={onClose}
               reduceMotion={reduceMotion}
               statusCardRef={statusCardRef}
+              testerMode={testerMode}
             />
           </motion.section>
         </div>
@@ -303,8 +361,13 @@ function ChallengeHeader({
             <BranchIcon branch={node.branchId} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.17em] text-cyan sm:text-xs">
+            <p className="flex items-center gap-2 truncate text-[10px] font-semibold uppercase tracking-[0.17em] text-cyan sm:text-xs">
               {branch.name}
+              {node.bonus && (
+                <span className="rounded-full border border-cyan/40 bg-cyan/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.14em] text-cyan">
+                  Bonus
+                </span>
+              )}
             </p>
             <p className="mt-0.5 truncate text-xs text-muted">
               Reto {node.id} · {STATUS_COPY[status].label}
@@ -337,6 +400,7 @@ function ChallengeBody({
   onClose,
   reduceMotion,
   statusCardRef,
+  testerMode = false,
 }: {
   node: SkillNodeDef;
   status: NodeStatus;
@@ -354,11 +418,17 @@ function ChallengeBody({
   onClose: () => void;
   reduceMotion: boolean;
   statusCardRef: RefObject<HTMLElement | null>;
+  testerMode?: boolean;
 }) {
   const branch = BRANCHES[node.branchId];
   const presentation = getChallengePresentation(node);
   const statusCopy = STATUS_COPY[status];
   const DetailedChallenge = DETAILED_CHALLENGE_COMPONENTS[node.id];
+  const isOpen = status === "available" || status === "in_progress";
+
+  if (WORK_IN_PROGRESS_NODE_IDS.has(node.id)) {
+    return <WorkInProgressMessage node={node} onClose={onClose} />;
+  }
 
   if (DetailedChallenge && status !== "locked") {
     return (
@@ -367,9 +437,9 @@ function ChallengeBody({
       }`}>
         <DetailedChallenge
           savedProgress={challengeProgress}
-          readOnly={status === "completed"}
-          onSave={(progress) => onSaveChallengeProgress(node.id, progress)}
-          onComplete={(progress) => onCompleteChallenge(node.id, progress)}
+          readOnly={status === "completed" || testerMode}
+          onSave={testerMode ? NOOP : (progress) => onSaveChallengeProgress(node.id, progress)}
+          onComplete={testerMode ? NOOP : (progress) => onCompleteChallenge(node.id, progress)}
           onExit={onClose}
         />
       </div>
@@ -445,7 +515,7 @@ function ChallengeBody({
             className={`rounded-2xl border p-5 sm:p-6 ${
               status === "completed"
                 ? "border-ok/30 bg-ok/[0.07]"
-                : status === "available"
+                : isOpen
                   ? "border-cyan/25 bg-cyan/[0.055]"
                   : "border-line bg-surface/45"
             }`}
@@ -479,7 +549,7 @@ function ChallengeBody({
               </div>
             )}
 
-            {status === "available" && (
+            {isOpen && !testerMode && (
               <motion.button
                 type="button"
                 whileHover={reduceMotion ? undefined : { y: -2 }}
@@ -490,6 +560,12 @@ function ChallengeBody({
                 Registrar mi entrega
                 <ArrowIcon />
               </motion.button>
+            )}
+
+            {isOpen && testerMode && (
+              <div className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-cyan/25 bg-cyan/[0.06] px-4 text-center text-xs font-semibold text-cyan">
+                Modo tester: solo vista, no registra entregas
+              </div>
             )}
 
             {status === "completed" && (
@@ -511,6 +587,58 @@ function ChallengeBody({
   );
 }
 
+function WorkInProgressMessage({
+  node,
+  onClose,
+}: {
+  node: SkillNodeDef;
+  onClose: () => void;
+}) {
+  const branch = BRANCHES[node.branchId];
+
+  return (
+    <div className="flex flex-1 items-center justify-center overflow-y-auto p-5 sm:p-8">
+      <div className="w-full max-w-xl rounded-3xl border border-cyan/20 bg-gradient-to-br from-[#0c2d47] to-[#092238] p-7 text-center shadow-[0_24px_70px_rgba(0,0,0,0.3)] sm:p-10">
+        <span
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border"
+          style={{
+            background: `${branch.color}18`,
+            borderColor: `${branch.color}45`,
+            color: branch.color,
+          }}
+        >
+          <PrototypeIcon />
+        </span>
+
+        <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan sm:text-xs">
+          Próximamente
+        </p>
+        <h2
+          id="skill-detail-title"
+          className="mt-3 text-balance font-heading text-3xl font-semibold leading-tight tracking-[-0.03em] text-ink sm:text-4xl"
+        >
+          Todavía estamos trabajando en este reto
+        </h2>
+        <p
+          id="skill-detail-description"
+          className="mx-auto mt-4 max-w-md text-sm leading-7 text-muted sm:text-base"
+        >
+          Estamos preparando la experiencia de {branch.name}. Muy pronto podrás
+          explorarla y completar sus desafíos.
+        </p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-8 inline-flex min-h-11 items-center justify-center rounded-xl bg-cyan px-6 py-3 text-sm font-semibold text-night transition-colors hover:bg-cyan/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
+        >
+          Volver al mapa
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MetaPill({ label }: { label: string }) {
   return (
     <span className="inline-flex min-h-7 items-center rounded-full border border-line bg-surface-raised/60 px-3 text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">
@@ -520,12 +648,13 @@ function MetaPill({ label }: { label: string }) {
 }
 
 function StatusPill({ status }: { status: NodeStatus }) {
+  const isOpen = status === "available" || status === "in_progress";
   return (
     <span
       className={`inline-flex min-h-7 items-center gap-1.5 rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.11em] ${
         status === "completed"
           ? "border-ok/35 bg-ok/10 text-ok"
-          : status === "available"
+          : isOpen
             ? "border-cyan/35 bg-cyan/10 text-cyan"
             : "border-line bg-night/30 text-muted"
       }`}
@@ -534,7 +663,7 @@ function StatusPill({ status }: { status: NodeStatus }) {
         className={`h-1.5 w-1.5 rounded-full ${
           status === "completed"
             ? "bg-ok"
-            : status === "available"
+            : isOpen
               ? "bg-cyan shadow-[0_0_8px_rgba(53,196,232,0.75)]"
               : "bg-muted"
         }`}
@@ -582,18 +711,27 @@ function DeliveryFormatCard({ format }: { format: DeliveryFormat }) {
 }
 
 function StatusIcon({ status }: { status: NodeStatus }) {
+  const isOpen = status === "available" || status === "in_progress";
   return (
     <span
       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
         status === "completed"
           ? "border-ok/30 bg-ok/10 text-ok"
-          : status === "available"
+          : isOpen
             ? "border-cyan/30 bg-cyan/10 text-cyan"
             : "border-line bg-night/35 text-muted"
       }`}
       aria-hidden="true"
     >
-      {status === "completed" ? <CheckIcon /> : status === "locked" ? <LockIcon /> : <SparkIcon />}
+      {status === "completed" ? (
+        <CheckIcon />
+      ) : status === "locked" ? (
+        <LockIcon />
+      ) : status === "in_progress" ? (
+        <InProgressIcon />
+      ) : (
+        <SparkIcon />
+      )}
     </span>
   );
 }
@@ -640,6 +778,15 @@ function SparkIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="m12 3 1.5 5.5L19 10l-5.5 1.5L5 10l5.5-1.5L12 3Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function InProgressIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="7.2" />
+      <circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none" />
     </svg>
   );
 }

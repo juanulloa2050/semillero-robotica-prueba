@@ -113,9 +113,23 @@ export function LocalEvidenceUploader({
         await removeEvidenceFile(value[0].id).catch(() => undefined);
       }
       onChange(multiple ? [...value, ...stored] : stored);
-    } catch {
+    } catch (uploadError) {
+      // El archivo puede fallar en el servidor (permisos, tamaño del bucket,
+      // red) y no sólo en este navegador: mostrar siempre lo mismo hacía
+      // imposible saber qué pasó.
+      const detail =
+        uploadError instanceof Error
+          ? uploadError.message
+          : typeof uploadError === "object" &&
+              uploadError !== null &&
+              "message" in uploadError
+            ? String((uploadError as { message: unknown }).message)
+            : "";
+      console.error("[semillero] No se pudo subir la evidencia:", uploadError);
       setError(
-        "No pudimos guardar el archivo en este navegador. Revisa el espacio disponible e inténtalo de nuevo."
+        detail
+          ? `No pudimos guardar el archivo: ${detail}`
+          : "No pudimos guardar el archivo. Revisa tu conexión e inténtalo de nuevo."
       );
     } finally {
       setBusy(false);
@@ -138,6 +152,7 @@ export function LocalEvidenceUploader({
   };
 
   const atLimit = multiple ? value.length >= maxFiles : false;
+  const storedRemotely = value.length > 0 && value.every((file) => Boolean(file.storagePath));
 
   return (
     <section className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-line bg-night/30 p-4 sm:p-5">
@@ -184,7 +199,7 @@ export function LocalEvidenceUploader({
           <span className="text-muted">Aún no has agregado evidencia.</span>
         ) : (
           <span className="text-ok">
-            {value.length} archivo{value.length === 1 ? "" : "s"} guardado{value.length === 1 ? "" : "s"} localmente.
+            {value.length} archivo{value.length === 1 ? "" : "s"} guardado{value.length === 1 ? "" : "s"}{storedRemotely ? " en tu entrega" : " en este navegador"}.
           </span>
         )}
       </div>
@@ -241,7 +256,9 @@ export function LocalEvidenceUploader({
       )}
 
       <p className="mt-3 text-[11px] leading-4 text-muted/80">
-        Prototipo sin backend: el archivo queda en el almacenamiento privado de este navegador y no sale de tu dispositivo.
+        {storedRemotely
+          ? "El archivo se almacena de forma privada y sólo puede consultarlo el equipo evaluador."
+          : "Sin una sesión conectada, el archivo permanece únicamente en este navegador."}
       </p>
     </section>
   );

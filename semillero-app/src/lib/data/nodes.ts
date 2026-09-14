@@ -17,7 +17,8 @@ function n(
   title: string,
   category: SkillNodeDef["category"],
   description: string,
-  requires: string[]
+  requires: string[],
+  extra?: { bonus?: boolean }
 ): SkillNodeDef {
   return {
     id,
@@ -29,25 +30,26 @@ function n(
     typeLabel: TYPE_LABEL[category],
     description,
     requires,
+    ...extra,
   };
 }
 
 export const SKILL_NODES: SkillNodeDef[] = [
   // Diseño / CAD
-  n("D0", "design", 0, 0, "Del plano al modelo", "fundamentos",
-    "Se entrega un plano técnico sencillo: modela la pieza, sube tu archivo o capturas y responde las dimensiones principales.", []),
-  n("D1A", "design", 1, -1, "Geometría bajo control", "sub",
+  n("D0", "design", 0, 0, "Identifica las operaciones", "fundamentos",
+    "Observa una pieza terminada y selecciona qué operaciones de modelado se usaron para construirla.", []),
+  n("D1A", "design", 1, -2, "Geometría bajo control", "sub",
     "Observa varios croquis e identifica cuál está completamente definido y qué restricción falta.", ["D0"]),
-  n("D1B", "design", 1, 1, "El material también diseña", "sub",
-    "Asigna un material real a tu pieza (por ejemplo aluminio 6061) y calcula su masa, volumen y centro de masa.", ["D0"]),
-  n("D2", "design", 2, 0, "Diseña menos, logra más", "aplicacion",
-    "Reduce al menos 15% la masa de tu pieza sin modificar las superficies de montaje, y explica tus decisiones.", ["D1A", "D1B"]),
-  n("D3A", "design", 3, -1, "Diseña para imprimir", "profundizacion",
-    "Se presenta una pieza problemática para impresión 3D: identifica y corrige los problemas de manufactura aditiva.", ["D2"]),
-  n("D3B", "design", 3, 1, "Diseña para fabricar y ensamblar", "profundizacion",
-    "Detecta problemas de manufactura y ensamble en una pieza (tornillos inaccesibles, tolerancias imposibles) y corrígelos.", ["D2"]),
-  n("D4", "design", 4, 0, "Diseña algo que exista", "libre",
-    "Diseña una pieza, conjunto o mecanismo que consideres útil para un robot y documenta tu proceso.", ["D3A", "D3B"]),
+  n("D1B", "design", 1, 2, "Del plano al volumen", "sub",
+    "Modela en CAD la pieza que aparece en el plano y reporta su volumen con una tolerancia del ±2%.", ["D0"]),
+  n("D1C", "design", 1, 0, "Vistas técnicas y Tool Block", "sub",
+    "Identifica el tipo de vista de dibujo correcto y construye/modifica una pieza en varios pasos, reportando su masa en cada uno.", ["D0"]),
+  n("D2", "design", 2, 0, "Entrega tus modelos CAD", "aplicacion",
+    "Reúne los archivos CAD de los retos que resolviste y entrégalos con una explicación de cómo los construiste.", ["D1A", "D1B", "D1C"]),
+  n("D4", "design", 3, 0, "Diseña algo que exista", "libre",
+    "Reto libre: propón tu propio diseño para un robot y documenta las decisiones detrás de él.", ["D2"]),
+  n("D5", "design", 0, 2, "Muéstranos tu mejor trabajo", "libre",
+    "Comparte un modelo CAD propio que ya hayas hecho y cuéntanos qué es, qué problema resolvía y qué fue lo más difícil.", []),
 
   // Mecánica
   n("M0", "mechanics", 0, 0, "Piensa como un mecanismo", "fundamentos",
@@ -117,21 +119,21 @@ export const SKILL_NODES: SkillNodeDef[] = [
   n("S4", "software", 4, 0, "Software libre", "libre",
     "Crea una herramienta de software útil para un robot: nodo, controlador, GUI, simulador o algoritmo.", ["S3A", "S3B"]),
 
-  // Inteligencia Artificial
-  n("A0", "ai", 0, 0, "Limpia antes de aprender", "fundamentos",
-    "Encuentra problemas en un dataset: duplicados, etiquetas incorrectas, desbalance o contaminación train/test.", []),
-  n("A1A", "ai", 1, -1, "¿Qué significa funcionar?", "sub",
-    "A partir de una matriz de confusión o escenario, decide qué métrica importa más para el problema.", ["A0"]),
-  n("A1B", "ai", 1, 1, "Prepara los datos", "sub",
-    "Elige o aplica técnicas de preprocesamiento: augmentation, resize, normalización, balanceo o limpieza.", ["A0"]),
-  n("A2", "ai", 2, 0, "Entrena algo real", "aplicacion",
-    "Entrena un modelo con una herramienta a tu elección y entrega captura, métrica y explicación del proceso.", ["A1A", "A1B"]),
-  n("A3A", "ai", 3, -1, "El mejor modelo depende del robot", "profundizacion",
-    "Compara modelos por precisión, latencia, tamaño y consumo, y elige el más adecuado según el hardware disponible.", ["A2"]),
-  n("A3B", "ai", 3, 1, "¿Por qué falló fuera del laboratorio?", "profundizacion",
-    "Diagnostica por qué un modelo falla fuera del laboratorio (iluminación, ángulo, ruido) y propone mejoras.", ["A2"]),
-  n("A4", "ai", 4, 0, "IA libre", "libre",
-    "Entrena, evalúa o experimenta con un modelo de IA que te interese y documenta tus resultados.", ["A3A", "A3B"]),
+  // Inteligencia Artificial — percepción de una pelota de tenis de mesa
+  n("A0", "ai", 0, 0, "¿Puedes confiar en tus datos?", "fundamentos",
+    "Audita un dataset multiclase de pelotas de tenis de mesa, determina si es confiable para detectar únicamente `ball` y prepara una versión utilizable, documentando cada problema y decisión de limpieza.", []),
+  n("A1", "ai", 1, 0, "¿Entiendes lo que estás observando?", "sub",
+    "Analiza distribución, geometría y color del dataset ya auditado: cuartiles de bounding boxes, motion blur como hipótesis física, histogramas HSV y el falso dilema Precision vs. Recall.", ["A0"]),
+  n("A2_YOLO", "ai", 2, -1, "Entrena, pero primero formula una hipótesis", "aplicacion",
+    "Entrena un detector YOLOv8 con Ultralytics: baseline reproducible, experimentación controlada (una variable a la vez) e interpretación de las pérdidas reportadas.", ["A1"]),
+  n("A2_OPENCV", "ai", 2, 1, "¿Realmente necesitas Deep Learning?", "aplicacion",
+    "Construye un detector clásico con OpenCV (HSV, threshold, contornos) a partir de los hallazgos de A1, y audita si el código generado por IA convierte los colores correctamente.", ["A1"]),
+  n("A3", "ai", 3, 0, "¿Tu solución funciona fuera del caso ideal?", "profundizacion",
+    "Compara experimentalmente YOLO y OpenCV bajo degradaciones controladas (brillo y otras), sin asumir de antemano cuál se degrada primero.", ["A2_YOLO", "A2_OPENCV"]),
+  n("A4_RL", "ai", 4, -1, "El agente optimiza lo que escribiste", "libre",
+    "BONUS — Entrena un agente de Reinforcement Learning, analiza su curva de recompensa e identifica si maximizar el reward realmente logró el comportamiento deseado (reward hacking).", ["A3"], { bonus: true }),
+  n("A4_GENERAL", "ai", 4, 1, "¿Puedes salirte del dataset?", "libre",
+    "BONUS — Consigue evidencia de que tu detector funciona fuera del dominio visual original y, opcionalmente, añade tracking temporal eficiente en vez de detectar en cada frame.", ["A3"], { bonus: true }),
 
   // Sistemas e Integración Robótica
   n("SI0", "systems", 0, 0, "Entra a la terminal", "fundamentos",
@@ -165,7 +167,15 @@ export const IR_NODE: SkillNodeDef = n(
   []
 );
 
-export const APPLICATION_NODE_IDS = ["D2", "M2", "E2", "C2", "S2", "A2", "SI2"];
+export const APPLICATION_NODE_IDS: ReadonlyArray<string | readonly string[]> = [
+  "D2",
+  "M2",
+  "E2",
+  "C2",
+  "S2",
+  ["A2_YOLO", "A2_OPENCV"],
+  "SI2",
+];
 
 export const ALL_NODES: SkillNodeDef[] = [...SKILL_NODES, IR_NODE];
 

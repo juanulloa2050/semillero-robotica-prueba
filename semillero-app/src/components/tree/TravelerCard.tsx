@@ -9,7 +9,11 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { BRANCHES, BRANCH_ORDER } from "@/lib/data/branches";
-import { branchProgressPercent } from "@/lib/unlock";
+import {
+  MIN_COMPLETED_NODES_TO_FINISH,
+  MIN_EXPLORED_BRANCHES_TO_FINISH,
+  branchProgressPercent,
+} from "@/lib/unlock";
 import type { NodeStatus } from "@/lib/types";
 
 export interface TravelerCardData {
@@ -18,6 +22,7 @@ export interface TravelerCardData {
   branches: number;
   progress: Record<string, NodeStatus>;
   ready: boolean;
+  reviewMode?: boolean;
   [key: string]: unknown;
 }
 
@@ -35,7 +40,7 @@ const HANDLE_STYLE = {
 };
 
 export function TravelerCard({ data }: NodeProps<TravelerNode>) {
-  const { name, completed, branches, progress, ready } = data;
+  const { name, completed, branches, progress, ready, reviewMode = false } = data;
   const initials = name
     ? name
         .split(" ")
@@ -103,7 +108,7 @@ export function TravelerCard({ data }: NodeProps<TravelerNode>) {
           {name || "Aspirante"}
         </p>
         <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-cyan">
-          Nodo central
+          {reviewMode ? "Aspirante evaluado" : "Nodo central"}
         </p>
       </div>
 
@@ -150,12 +155,38 @@ export function TravelerCard({ data }: NodeProps<TravelerNode>) {
         </div>
       </div>
 
-      {ready && (
+      {!reviewMode && (
+        <div
+          className={`mt-4 rounded-xl border px-3 py-3 text-left ${
+            ready
+              ? "border-ok/35 bg-ok/[0.09]"
+              : "border-cyan/25 bg-cyan/[0.06]"
+          }`}
+        >
+          <p className={`text-[11px] font-bold ${ready ? "text-ok" : "text-ice"}`}>
+            {ready ? "Entrega final habilitada" : "¿Cuándo puedes enviar tu prueba?"}
+          </p>
+          <p className="mt-1 text-[10px] leading-4 text-muted">
+            Completa {MIN_COMPLETED_NODES_TO_FINISH} retos en al menos{" "}
+            {MIN_EXPLORED_BRANCHES_TO_FINISH} ramas diferentes.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-center text-[10px] font-semibold">
+            <span className={`rounded-lg px-2 py-1.5 ${completed >= MIN_COMPLETED_NODES_TO_FINISH ? "bg-ok/15 text-ok" : "bg-night/45 text-cyan"}`}>
+              {Math.min(completed, MIN_COMPLETED_NODES_TO_FINISH)}/{MIN_COMPLETED_NODES_TO_FINISH} retos
+            </span>
+            <span className={`rounded-lg px-2 py-1.5 ${branches >= MIN_EXPLORED_BRANCHES_TO_FINISH ? "bg-ok/15 text-ok" : "bg-night/45 text-cyan"}`}>
+              {Math.min(branches, MIN_EXPLORED_BRANCHES_TO_FINISH)}/{MIN_EXPLORED_BRANCHES_TO_FINISH} ramas
+            </span>
+          </div>
+        </div>
+      )}
+
+      {ready && !reviewMode && (
         <Link
           href="/perfil"
           className="nodrag nopan mt-4 inline-flex min-h-9 w-full items-center justify-center rounded-xl bg-gradient-to-r from-tech to-cyan px-3 py-2 text-xs font-bold text-night shadow-[0_8px_22px_rgba(53,196,232,0.2)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
         >
-          Finalizar recorrido
+          Preparar entrega final
           <span aria-hidden="true" className="ml-1.5">
             →
           </span>

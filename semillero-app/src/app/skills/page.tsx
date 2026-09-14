@@ -50,7 +50,8 @@ import { NodeDetailPanel } from "@/components/tree/NodeDetailPanel";
 import { MobileSkillTree } from "@/components/tree/MobileSkillTree";
 import { ExitJourneyDialog } from "@/components/tree/ExitJourneyDialog";
 import { canAccessSkillTree } from "@/lib/journey";
-import type { BranchId } from "@/lib/types";
+import { useTesterSession } from "@/lib/tester/session";
+import type { BranchId, NodeStatus } from "@/lib/types";
 
 const nodeTypes = {
   skill: SkillNodeCard,
@@ -71,10 +72,10 @@ const HANDLE_POSITION: Record<HandleSide, Position> = {
 const HYBRID_LINKS = [
   ["D2", "M2"],
   ["E2", "C2"],
-  ["S2", "A2"],
+  ["S2", "A2_YOLO"],
   ["C4", "SI4"],
   ["S3B", "SI4"],
-  ["A3A", "E3A"],
+  ["A3", "E3A"],
 ] as const;
 
 function TreeCanvas() {
@@ -93,11 +94,13 @@ function TreeCanvas() {
   const [isCompact, setIsCompact] = useState(false);
   const { fitView, setCenter } = useReactFlow();
   const router = useRouter();
+  const { hydrated: testerHydrated, testerActive, deactivateTester } = useTesterSession();
   const canAccess = canAccessSkillTree(state);
-  const accessAllowed = sessionActive && canAccess && !state.submitted;
+  const accessAllowed = testerActive || (sessionActive && canAccess && !state.submitted);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !testerHydrated) return;
+    if (testerActive) return;
     if (!sessionActive) {
       router.replace("/");
       return;
@@ -107,10 +110,20 @@ function TreeCanvas() {
       return;
     }
     if (!canAccess) router.replace("/registro");
-  }, [canAccess, hydrated, router, sessionActive, state.submitted]);
+  }, [canAccess, hydrated, router, sessionActive, state.submitted, testerActive, testerHydrated]);
 
   const positions = useMemo(() => layoutPositions(), []);
-  const statuses = useMemo(() => computeAllStatuses(state.progress), [state.progress]);
+  const statuses = useMemo(() => {
+    const computed = computeAllStatuses(state.progress, state.challengeProgress);
+    if (!testerActive) return computed;
+    // Modo espectador: todo queda visible y abierto para revisión, sin
+    // necesitar progreso ni respuestas reales.
+    const overridden: Record<string, NodeStatus> = {};
+    for (const [id, status] of Object.entries(computed)) {
+      overridden[id] = status === "completed" ? status : "available";
+    }
+    return overridden;
+  }, [state.progress, state.challengeProgress, testerActive]);
   const completedTotal = completedCount(state.progress);
   const branchesTotal = branchesExplored(state.progress);
   const ready = canFinishJourney(state.progress);
@@ -140,7 +153,7 @@ function TreeCanvas() {
       selectable: false,
       zIndex: 5,
       data: {
-        name: state.profile.fullName,
+        name: testerActive ? "Modo tester" : state.profile.fullName,
         completed: completedTotal,
         branches: branchesTotal,
         progress: state.progress,
@@ -195,6 +208,7 @@ function TreeCanvas() {
             dimmed: overview && statuses[node.id] === "locked",
             color: BRANCHES[node.branchId].color,
             isIR: node.id === IR_NODE.id,
+            bonus: node.bonus === true,
             targetPosition: HANDLE_POSITION[inward],
             sourcePosition: HANDLE_POSITION[out],
             onOpen: setSelectedId,
@@ -213,6 +227,7 @@ function TreeCanvas() {
     state.profile.fullName,
     state.progress,
     statuses,
+    testerActive,
     visible,
   ]);
 
@@ -306,7 +321,10 @@ function TreeCanvas() {
     }
 
     if (visible.has(IR_NODE.id)) {
-      for (const applicationId of APPLICATION_NODE_IDS) {
+      const applicationIds = APPLICATION_NODE_IDS.flatMap((group) =>
+        Array.isArray(group) ? group : [group]
+      );
+      for (const applicationId of applicationIds) {
         if (statuses[applicationId] !== "completed") continue;
         const applicationNode = nodeById(applicationId);
         if (!applicationNode) continue;
@@ -363,10 +381,11 @@ function TreeCanvas() {
   );
 
   const handleExit = useCallback(() => {
-    endSession();
+    if (testerActive) deactivateTester();
+    else endSession();
     setExitOpen(false);
     router.replace("/");
-  }, [endSession, router]);
+  }, [deactivateTester, endSession, router, testerActive]);
 
   const detailPanel = (
     <NodeDetailPanel
@@ -378,6 +397,7 @@ function TreeCanvas() {
       challengeProgress={selectedId ? state.challengeProgress[selectedId] : undefined}
       onSaveChallengeProgress={saveChallengeProgress}
       onCompleteChallenge={completeChallenge}
+      testerMode={testerActive}
     />
   );
 
@@ -389,7 +409,7 @@ function TreeCanvas() {
     />
   );
 
-  if (!hydrated || !accessAllowed) {
+  if (!hydrated || !testerHydrated || !accessAllowed) {
     return <TreeLoading />;
   }
 
@@ -405,7 +425,7 @@ function TreeCanvas() {
           onOpen={setSelectedId}
           completedTotal={completedTotal}
           branchesTotal={branchesTotal}
-          profileName={state.profile.fullName}
+          profileName={testerActive ? "Modo tester" : state.profile.fullName}
           ready={ready}
         />
         {detailPanel}
@@ -425,6 +445,7 @@ function TreeCanvas() {
           onExit={() => setExitOpen(true)}
           completedTotal={completedTotal}
           branchesTotal={branchesTotal}
+          testerMode={testerActive}
         />
       </div>
 

@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { AppState, JsonValue, NodeChallengeProgress } from "@/lib/types";
-import { nodeById } from "@/lib/data/nodes";
+import type { AppState, NodeChallengeProgress } from "@/lib/types";
+import { RunEvidencePanel } from "@/components/evaluator/RunEvidencePanel";
+import { EvaluatorSkillTree } from "@/components/evaluator/EvaluatorSkillTree";
+import { useEvaluatorSession } from "@/lib/evaluator/session";
 
 type RunStatus = "draft" | "submitted" | "evaluated";
 type StatusFilter = "all" | RunStatus;
@@ -30,6 +32,7 @@ interface CandidateRun {
 export default function EvaluadorPage() {
   const router = useRouter();
   const auth = useAuth();
+  const localEvaluator = useEvaluatorSession();
   const [runs, setRuns] = useState<CandidateRun[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<StatusFilter>("submitted");
@@ -58,12 +61,25 @@ export default function EvaluadorPage() {
   }, [auth.role, auth.user]);
 
   useEffect(() => {
-    if (auth.loading) return;
+    if (auth.loading || !localEvaluator.hydrated) return;
+    if (!auth.configured) {
+      if (!localEvaluator.evaluator) router.replace("/evaluador/login");
+      return;
+    }
     if (!auth.user) router.replace("/login");
     else if (auth.role === "candidate") router.replace("/skills");
     else if (auth.role === "admin") router.replace("/admin");
     else if (auth.role === "evaluator") void Promise.resolve().then(loadRuns);
-  }, [auth.loading, auth.role, auth.user, loadRuns, router]);
+  }, [
+    auth.configured,
+    auth.loading,
+    auth.role,
+    auth.user,
+    loadRuns,
+    localEvaluator.evaluator,
+    localEvaluator.hydrated,
+    router,
+  ]);
 
   const counts = useMemo(() => ({
     all: runs.length,
@@ -87,11 +103,25 @@ export default function EvaluadorPage() {
     : visibleRuns[0]?.id ?? null;
   const selected = visibleRuns.find((run) => run.id === effectiveSelectedId) ?? null;
 
-  if (auth.loading || (loading && runs.length === 0)) return <PanelLoading label="Cargando aspirantes…" />;
-  if (!auth.configured) return <EmptyState title="Supabase no está configurado" body="Conecta el proyecto para abrir el panel de evaluación." />;
+  if (auth.loading || !localEvaluator.hydrated) {
+    return <PanelLoading label="Cargando aspirantes…" />;
+  }
+  if (!auth.configured) {
+    if (!localEvaluator.evaluator) return <PanelLoading label="Abriendo acceso de evaluador…" />;
+    return (
+      <LocalEvaluatorDashboard
+        username={localEvaluator.evaluator.username}
+        onLogout={() => {
+          localEvaluator.logout();
+          router.replace("/evaluador/login");
+        }}
+      />
+    );
+  }
+  if (loading && runs.length === 0) return <PanelLoading label="Cargando aspirantes…" />;
 
   return (
-    <div className="mx-auto min-h-[calc(100svh-4rem)] max-w-[90rem] px-4 py-7 sm:px-7 lg:px-9">
+    <div className="min-h-[calc(100svh-4rem)] w-full px-4 py-7 sm:px-6 lg:px-7 2xl:px-9">
       <header className="flex flex-wrap items-start justify-between gap-5 border-b border-line pb-6">
         <div className="max-w-2xl">
           <h1 className="text-balance font-heading text-3xl font-semibold tracking-[-0.025em] text-ink sm:text-4xl">Banco de aspirantes</h1>
@@ -120,7 +150,7 @@ export default function EvaluadorPage() {
         </label>
       </div>
 
-      <div className="mt-5 grid min-h-[38rem] gap-5 lg:grid-cols-[21rem_minmax(0,1fr)]">
+      <div className="mt-5 grid min-h-[38rem] gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] 2xl:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="min-h-0" aria-label="Lista de aspirantes">
           <div className="max-h-[calc(100svh-15rem)] space-y-2 overflow-y-auto pr-1">
             {visibleRuns.length === 0 && <EmptyState title="No hay resultados" body="Cambia el filtro o la búsqueda para ver otros aspirantes." compact />}
@@ -129,6 +159,40 @@ export default function EvaluadorPage() {
         </aside>
         <main className="min-w-0">{selected ? <RunDetail run={selected} evaluatorId={auth.user?.id ?? ""} onSaved={loadRuns} /> : <EmptyState title="Selecciona un aspirante" body="El detalle del recorrido aparecerá aquí." />}</main>
       </div>
+    </div>
+  );
+}
+
+function LocalEvaluatorDashboard({
+  username,
+  onLogout,
+}: {
+  username: string;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="min-h-[calc(100svh-4rem)] w-full px-5 py-10 sm:px-8">
+      <header className="mx-auto flex max-w-5xl flex-wrap items-start justify-between gap-5 border-b border-line pb-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan">Modo local</p>
+          <h1 className="mt-2 font-heading text-3xl font-semibold text-ink">Panel de evaluación</h1>
+          <p className="mt-2 text-sm text-muted">Sesión activa: {username}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="min-h-10 rounded-lg border border-line px-4 text-xs font-semibold text-muted transition-colors hover:border-cyan/45 hover:text-ink"
+        >
+          Cerrar sesión
+        </button>
+      </header>
+      <section className="mx-auto mt-8 max-w-5xl rounded-2xl border border-line bg-surface/70 p-6">
+        <p className="text-sm font-semibold text-ice">Todavía no hay candidatos sincronizados</p>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          El panel local permite validar el acceso de evaluador. Configura Supabase para consultar recorridos enviados,
+          evidencias y evaluaciones compartidas.
+        </p>
+      </section>
     </div>
   );
 }
@@ -148,50 +212,22 @@ function CandidateRow({ run, selected, onSelect }: { run: CandidateRun; selected
 
 function RunDetail({ run, evaluatorId, onSaved }: { run: CandidateRun; evaluatorId: string; onSaved: () => Promise<void> }) {
   const snapshot = run.snapshot;
-  const completedNodes = Object.entries(snapshot?.progress ?? {}).filter(([, status]) => status === "completed");
+  const completedNodes = Object.values(snapshot?.progress ?? {}).filter((status) => status === "completed").length;
   const challenges = Object.values(snapshot?.challengeProgress ?? {});
   return (
-    <section className="rounded-2xl border border-line bg-surface/40 p-5 sm:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-6">
+    <section>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-line bg-surface/40 p-5">
         <div><h2 className="font-heading text-2xl font-semibold tracking-[-0.02em] text-ink">{run.candidate?.fullName || "Aspirante"}</h2><p className="mt-1 text-sm text-muted">{run.candidate?.email}</p><p className="mt-2 text-xs text-muted">{[run.candidate?.program, run.candidate?.semester && `Semestre ${run.candidate.semester}`, run.candidate?.studentCode && `Código ${run.candidate.studentCode}`].filter(Boolean).join(" · ") || "Perfil académico sin completar"}</p></div>
-        <StatusBadge status={run.status} />
+        <div className="flex flex-wrap items-center gap-3"><StatusBadge status={run.status} /><span className="text-xs text-muted">{completedNodes} retos · {countAttempts(challenges)} intentos · {countHints(challenges)} pistas</span></div>
       </div>
 
-      <dl className="mt-6 grid grid-cols-2 divide-x divide-y divide-line overflow-hidden rounded-xl border border-line sm:grid-cols-4 sm:divide-y-0">
-        <Metric label="Retos" value={String(completedNodes.length)} />
-        <Metric label="Intentos" value={String(countAttempts(challenges))} />
-        <Metric label="Pistas" value={String(countHints(challenges))} />
-        <Metric label="Enviado" value={run.submittedAt ? formatDate(run.submittedAt) : "Pendiente"} />
-      </dl>
+      <EvaluatorSkillTree runId={run.id} candidateName={run.candidate?.fullName || "Aspirante"} snapshot={snapshot} />
 
-      <section className="mt-7">
-        <h3 className="text-sm font-semibold text-ink">Recorrido completado</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {completedNodes.length === 0 && <p className="text-sm text-muted">Todavía no hay retos completados.</p>}
-          {completedNodes.map(([nodeId]) => <span key={nodeId} className="rounded-full border border-line bg-night/45 px-3 py-1.5 text-xs text-ice">{nodeId} · {nodeById(nodeId)?.title ?? "Reto"}</span>)}
-        </div>
-      </section>
-
-      <section className="mt-7">
-        <h3 className="text-sm font-semibold text-ink">Evidencia por reto</h3>
-        <div className="mt-3 space-y-2">{challenges.length ? challenges.map((challenge) => <ChallengeSummary key={challenge.nodeId} challenge={challenge} />) : <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">Este recorrido todavía no contiene intentos detallados.</p>}</div>
-      </section>
-
-      {run.status === "draft" ? <div className="mt-7 rounded-xl border border-line bg-night/30 p-5"><p className="text-sm font-semibold text-ink">Recorrido en curso</p><p className="mt-1 text-xs leading-5 text-muted">Puedes consultar el progreso, pero la evaluación se habilita cuando el aspirante envíe su recorrido.</p></div> : <EvaluationForm runId={run.id} evaluatorId={evaluatorId} onSaved={onSaved} />}
+      <div className="mt-5 rounded-2xl border border-line bg-surface/40 p-5 sm:p-7">
+        <RunEvidencePanel runId={run.id} snapshotIntroduction={snapshot?.introduction} showEvidence={false} />
+        {run.status === "draft" ? <div className="mt-7 rounded-xl border border-line bg-night/30 p-5"><p className="text-sm font-semibold text-ink">Recorrido en curso</p><p className="mt-1 text-xs leading-5 text-muted">Puedes consultar el progreso, pero la evaluación se habilita cuando el aspirante envíe su recorrido.</p></div> : <EvaluationForm runId={run.id} evaluatorId={evaluatorId} onSaved={onSaved} />}
+      </div>
     </section>
-  );
-}
-
-function ChallengeSummary({ challenge }: { challenge: NodeChallengeProgress }) {
-  const attempts = Object.values(challenge.steps).flatMap((step) => step.attempts);
-  const seconds = Object.values(challenge.steps).reduce((sum, step) => sum + step.totalActiveSeconds, 0);
-  return (
-    <details className="group rounded-xl border border-line bg-night/35 open:bg-night/50">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"><span>{challenge.nodeId} · {nodeById(challenge.nodeId)?.title ?? "Reto"}</span><span className="shrink-0 text-xs font-normal text-muted">{attempts.length} intentos · {Math.round(seconds / 60)} min</span></summary>
-      <ol className="space-y-2 border-t border-line p-4 text-xs text-muted">
-        {attempts.map((attempt) => <li key={attempt.id} className="rounded-lg bg-surface/55 p-3"><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-ice">{attempt.stepId}</span><AnswerStatus value={attempt.isCorrect} /><span>{attempt.durationSeconds}s</span></div><pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-muted">{formatAnswer(attempt.answer)}</pre></li>)}
-      </ol>
-    </details>
   );
 }
 
@@ -263,11 +299,7 @@ function firstRelation(value: unknown): Record<string, unknown> | null {
 }
 function countAttempts(challenges: NodeChallengeProgress[]) { return challenges.reduce((total, challenge) => total + Object.values(challenge.steps).reduce((sum, step) => sum + step.attempts.length, 0), 0); }
 function countHints(challenges: NodeChallengeProgress[]) { return challenges.reduce((total, challenge) => total + Object.values(challenge.steps).reduce((sum, step) => sum + step.revealedHints, 0), 0); }
-function formatDate(value: string) { return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)); }
-function formatAnswer(value: JsonValue) { return typeof value === "string" ? value : JSON.stringify(value, null, 2); }
 function StatusBadge({ status }: { status: RunStatus }) { return <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${status === "evaluated" ? "border-ok/30 bg-ok/10 text-ok" : status === "submitted" ? "border-cyan/30 bg-cyan/10 text-cyan" : "border-line bg-night/35 text-muted"}`}>{FILTER_LABELS[status]}</span>; }
-function AnswerStatus({ value }: { value: boolean | null }) { return <span className={value === null ? "text-cyan" : value ? "text-ok" : "text-danger"}>{value === null ? "Revisión manual" : value ? "Correcto" : "Incorrecto"}</span>; }
-function Metric({ label, value }: { label: string; value: string }) { return <div className="bg-night/35 p-4"><dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">{label}</dt><dd className="mt-2 text-lg font-semibold tabular-nums text-ink">{value}</dd></div>; }
 function EmptyState({ title, body, compact = false }: { title: string; body: string; compact?: boolean }) { return <div className={`rounded-xl border border-dashed border-line text-center ${compact ? "p-5" : "p-9"}`}><p className="text-sm font-semibold text-ice">{title}</p><p className="mt-1 text-xs leading-5 text-muted">{body}</p></div>; }
 function PanelLoading({ label }: { label: string }) { return <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted">{label}</div>; }
 function SearchIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" strokeLinecap="round" /></svg>; }

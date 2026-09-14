@@ -7,6 +7,7 @@ export const BRANCH_HUB_RADIUS = 340;
 export const FIRST_TIER_RADIUS = 460;
 export const TIER_RADIUS_STEP = 155;
 export const FORK_SPREAD = 104;
+export const INTEGRATION_NODE_Y = 420;
 
 export type HandleSide = "top" | "right" | "bottom" | "left";
 
@@ -57,7 +58,9 @@ export function layoutPositions(): Record<string, NodePosition> {
     };
   }
 
-  positions[IR_NODE.id] = { x: 0, y: 190 };
+  // Keep the transversal challenge below the taller candidate card and past
+  // the two lower branch headers, while retaining the central open corridor.
+  positions[IR_NODE.id] = { x: 0, y: INTEGRATION_NODE_Y };
   return positions;
 }
 

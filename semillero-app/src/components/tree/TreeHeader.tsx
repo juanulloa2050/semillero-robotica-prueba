@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { BRANCHES, BRANCH_ORDER } from "@/lib/data/branches";
 import { BranchIcon } from "@/components/icons/BranchIcon";
+import { JourneyHelp } from "@/components/tree/JourneyHelp";
 import { branchCompletedCount } from "@/lib/unlock";
 import { SKILL_NODES } from "@/lib/data/nodes";
 import type { BranchId, NodeStatus } from "@/lib/types";
@@ -15,6 +16,7 @@ export function TreeHeader({
   onExit,
   completedTotal,
   branchesTotal,
+  testerMode = false,
 }: {
   progress: Record<string, NodeStatus>;
   overview: boolean;
@@ -23,6 +25,7 @@ export function TreeHeader({
   onExit: () => void;
   completedTotal: number;
   branchesTotal: number;
+  testerMode?: boolean;
 }) {
   return (
     <motion.section
@@ -36,11 +39,18 @@ export function TreeHeader({
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan shadow-[0_0_12px_rgba(53,196,232,0.8)]" />
           <h1 className="font-heading text-sm font-semibold text-ink">
-            Tu árbol de habilidades
+            {testerMode ? "Modo tester" : "Tu árbol de habilidades"}
           </h1>
+          {testerMode && (
+            <span className="rounded-full border border-cyan/40 bg-cyan/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-cyan">
+              Solo lectura
+            </span>
+          )}
         </div>
         <p className="mt-1 text-[10px] leading-relaxed text-muted">
-          {completedTotal} retos · {branchesTotal} ramas · arrastra para recorrer
+          {testerMode
+            ? "Todos los retos abiertos para revisión, sin guardar respuestas"
+            : `${completedTotal} retos · ${branchesTotal} ramas · arrastra para recorrer`}
         </p>
       </div>
 
@@ -83,6 +93,7 @@ export function TreeHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <JourneyHelp />
         <button
           type="button"
           onClick={onToggleOverview}
@@ -98,8 +109,8 @@ export function TreeHeader({
         <button
           type="button"
           onClick={onExit}
-          title="Cerrar sesión"
-          aria-label="Cerrar sesión"
+          title={testerMode ? "Salir del modo tester" : "Cerrar sesión"}
+          aria-label={testerMode ? "Salir del modo tester" : "Cerrar sesión"}
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-muted transition-all hover:border-danger/45 hover:bg-danger/10 hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
