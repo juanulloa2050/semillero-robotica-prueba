@@ -146,7 +146,7 @@ const DETAILED_CHALLENGE_COMPONENTS: Readonly<
   A4_GENERAL: (props) => <AiNodeChallenge {...props} content={A4_GENERAL_CONTENT} />,
 };
 
-const WORK_IN_PROGRESS_NODE_IDS = new Set(["C0", "S0"]);
+const WORK_IN_PROGRESS_NODE_IDS = new Set(["C0"]);
 
 export function NodeDetailPanel({
   node,
