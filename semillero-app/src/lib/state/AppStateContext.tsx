@@ -37,6 +37,12 @@ import {
   loadRemoteJourney,
   saveRemoteJourney,
 } from "@/lib/supabase/journeyStore";
+import {
+  candidateStorageKey,
+  createJourneyWriter,
+  reconcileJourneys,
+  type CachedJourney,
+} from "./journeySync";
 
 const STORAGE_KEY = "semillero-app-state-v1";
 const SESSION_KEY = "semillero-session-active";
@@ -182,14 +188,14 @@ function normalizeIntroduction(value: unknown): IntroItem[] {
   });
 }
 
-function loadState(): AppState {
+function loadState(key = STORAGE_KEY): AppState {
   if (typeof window === "undefined") return defaultState;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return defaultState;
     const parsedValue: unknown = JSON.parse(raw);
     if (!isRecord(parsedValue)) return defaultState;
-    const parsed = parsedValue;
+    const parsed = isRecord(parsedValue.state) ? parsedValue.state : parsedValue;
     const profile = normalizeProfile(parsed.profile);
     const profileLooksComplete = isValidCandidateProfile(profile);
     const challengeProgress: Record<string, NodeChallengeProgress> = {};
@@ -279,6 +285,28 @@ function loadState(): AppState {
   }
 }
 
+function loadCandidateCache(userId: string, email: string): CachedJourney | null {
+  try {
+    const raw = window.localStorage.getItem(candidateStorageKey(userId));
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (isRecord(parsed) && isRecord(parsed.state)) {
+        return {
+          state: loadState(candidateStorageKey(userId)),
+          savedAt: isPositiveTimestamp(parsed.savedAt) ? parsed.savedAt : 0,
+        };
+      }
+    }
+    // Import only a matching legacy cache; the old key was shared by every
+    // account on the same browser.
+    const legacy = loadState();
+    if (legacy.profile.email.toLowerCase() === email.toLowerCase() && email) {
+      return { state: legacy, savedAt: 0 };
+    }
+  } catch { /* Storage may be unavailable. Remote loading still works. */ }
+  return null;
+}
+
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const [state, setState] = useState<AppState>(defaultState);
@@ -287,10 +315,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef<AppState>(defaultState);
+  const readyUserId = useRef<string | null>(null);
+  const remoteLoadFailed = useRef<string | null>(null);
+  const writers = useRef(new Map<string, ReturnType<typeof createJourneyWriter>>());
+  const saveRevision = useRef(0);
 
   useEffect(() => {
     // One-time sync from localStorage after mount, so SSR/client hydration match.
-    const restoredState = loadState();
+    const restoredState = auth.configured ? defaultState : loadState();
     stateRef.current = restoredState;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setState(restoredState);
@@ -308,6 +340,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!auth.configured || auth.loading) return;
     if (!auth.user) {
+      readyUserId.current = null;
+      remoteLoadFailed.current = null;
       void Promise.resolve().then(() => {
         setSessionActive(false);
         setHydrated(true);
@@ -316,33 +350,39 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
 
     let active = true;
+    const userId = auth.user.id;
+    readyUserId.current = null;
+    remoteLoadFailed.current = null;
+    const cached = loadCandidateCache(userId, auth.user.email ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(false);
     void loadRemoteJourney(auth.user.id)
       .then((remote) => {
         if (!active) return;
-        const local = stateRef.current;
-        const canImportLocal = Boolean(
-          remote &&
-            !remote.profile.program &&
-            local.profile.email &&
-            local.profile.email.toLowerCase() === (auth.user?.email ?? "").toLowerCase()
-        );
-        const next = canImportLocal ? local : remote ?? local;
+        const next = reconcileJourneys(remote?.state ?? null, remote?.updatedAt ?? 0, cached) ?? defaultState;
         stateRef.current = next;
         setState(next);
+        remoteLoadFailed.current = null;
+        readyUserId.current = userId;
         setSessionActive(true);
         setHydrated(true);
-        if (canImportLocal && auth.user) {
-          void saveRemoteJourney(auth.user.id, local).catch(() => setSaveStatus("error"));
-        }
       })
       .catch(() => {
         if (!active) return;
+        // Do not expose another account's state or overwrite the server after
+        // a failed read. A matching local cache remains usable until retry.
+        const next = cached?.state ?? defaultState;
+        stateRef.current = next;
+        setState(next);
+        remoteLoadFailed.current = userId;
+        readyUserId.current = userId;
         setSaveStatus("error");
         setSessionActive(true);
         setHydrated(true);
       });
     return () => {
       active = false;
+      if (readyUserId.current === userId) readyUserId.current = null;
     };
   }, [auth.configured, auth.loading, auth.user]);
 
@@ -358,14 +398,28 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const persistState = useCallback((snapshot: AppState) => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-      if (auth.configured && auth.user && auth.role === "candidate") {
-        void saveRemoteJourney(auth.user.id, snapshot)
-          .then(() => setSaveStatus("saved"))
-          .catch(() => setSaveStatus("error"));
-      } else {
+      if (!auth.configured) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
         setSaveStatus("saved");
+        return;
       }
+      if (!auth.user || auth.role !== "candidate" || readyUserId.current !== auth.user.id) return;
+      const userId = auth.user.id;
+      window.localStorage.setItem(candidateStorageKey(userId), JSON.stringify({ state: snapshot, savedAt: Date.now() }));
+      if (remoteLoadFailed.current === userId) {
+        setSaveStatus("error");
+        return;
+      }
+      let writer = writers.current.get(userId);
+      if (!writer) {
+        writer = createJourneyWriter((next) => saveRemoteJourney(userId, next));
+        writers.current.set(userId, writer);
+      }
+      const revision = ++saveRevision.current;
+      writer(snapshot, (error) => {
+        if (readyUserId.current !== userId || revision !== saveRevision.current) return;
+        setSaveStatus(error ? "error" : "saved");
+      });
     } catch {
       setSaveStatus("error");
     }
@@ -401,9 +455,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [auth, flushNow]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || (auth.configured && (!auth.user || auth.role !== "candidate" || readyUserId.current !== auth.user.id))) return;
     // Debounced sync to localStorage whenever state changes (autosave).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaveStatus("saving");
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
@@ -413,7 +466,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
-  }, [state, hydrated, persistState]);
+  }, [state, hydrated, persistState, auth.configured, auth.user, auth.role]);
 
   useEffect(() => {
     if (
@@ -426,14 +479,31 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     const retry = window.setTimeout(() => {
       setSaveStatus("saving");
-      persistState(stateRef.current);
+      if (remoteLoadFailed.current === auth.user?.id) {
+        const userId = auth.user.id;
+        void loadRemoteJourney(userId)
+          .then((remote) => {
+            if (readyUserId.current !== userId) return;
+            const cached = loadCandidateCache(userId, auth.user?.email ?? "");
+            const next = reconcileJourneys(remote?.state ?? null, remote?.updatedAt ?? 0, cached) ?? stateRef.current;
+            stateRef.current = next;
+            setState(next);
+            remoteLoadFailed.current = null;
+            persistState(next);
+          })
+          .catch(() => {
+            if (readyUserId.current === userId) setSaveStatus("error");
+          });
+      } else {
+        persistState(stateRef.current);
+      }
     }, 3000);
 
     return () => window.clearTimeout(retry);
   }, [auth.configured, auth.role, auth.user, hydrated, persistState, saveStatus]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || (auth.configured && (!auth.user || auth.role !== "candidate" || readyUserId.current !== auth.user.id))) return;
     const persistBeforeLeaving = () => flushNow();
     const persistWhenHidden = () => {
       if (document.visibilityState === "hidden") flushNow();
@@ -444,7 +514,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("pagehide", persistBeforeLeaving);
       document.removeEventListener("visibilitychange", persistWhenHidden);
     };
-  }, [flushNow, hydrated]);
+  }, [flushNow, hydrated, auth.configured, auth.user, auth.role]);
 
   const updateProfile = useCallback((patch: Partial<CandidateProfile>) => {
     commitState((prev) => ({
@@ -585,7 +655,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const resetAll = useCallback(() => {
     let storageError = false;
     try {
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(auth.configured && auth.user ? candidateStorageKey(auth.user.id) : STORAGE_KEY);
     } catch {
       storageError = true;
     }

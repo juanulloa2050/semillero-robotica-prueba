@@ -6,30 +6,39 @@ interface RunRow {
   snapshot: unknown;
   status: "draft" | "submitted" | "evaluated";
   submitted_at: string | null;
+  updated_at: string;
 }
 
 export async function loadRemoteJourney(
   userId: string
-): Promise<AppState | null> {
+): Promise<{ state: AppState; updatedAt: number } | null> {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) return null;
 
-  const [{ data: profile }, { data: candidate }, { data: run }] =
+  const [profileResult, candidateResult, runResult] =
     await Promise.all([
       supabase.from("profiles").select("full_name,email").eq("id", userId).maybeSingle(),
       supabase.from("candidate_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase
         .from("assessment_runs")
-        .select("id,snapshot,status,submitted_at")
+        .select("id,snapshot,status,submitted_at,updated_at")
         .eq("candidate_id", userId)
         .maybeSingle<RunRow>(),
     ]);
 
+  for (const result of [profileResult, candidateResult, runResult]) {
+    if (result.error) throw result.error;
+  }
+  const profile = profileResult.data;
+  const candidate = candidateResult.data;
+  const run = runResult.data;
+  const updatedAt = run?.updated_at ? new Date(run.updated_at).getTime() : 0;
+
   const snapshot = run?.snapshot;
-  if (isAppState(snapshot)) return snapshot;
+  if (isAppState(snapshot)) return { state: snapshot, updatedAt };
   if (!profile) return null;
 
-  return {
+  return { updatedAt, state: {
     schemaVersion: 3,
     profile: {
       fullName: profile.full_name ?? "",
@@ -54,7 +63,7 @@ export async function loadRemoteJourney(
     challengeProgress: {},
     submitted: run?.status === "submitted" || run?.status === "evaluated",
     submittedAt: run?.submitted_at ? new Date(run.submitted_at).getTime() : null,
-  };
+  } };
 }
 
 export async function saveRemoteJourney(
@@ -75,7 +84,10 @@ export async function saveRemoteJourney(
     .eq("candidate_id", userId)
     .single();
   if (runError) throw runError;
-  if (run.status !== "draft") return;
+  if (run.status !== "draft") {
+    if (state.submitted) return;
+    throw new Error("Este recorrido ya fue enviado y no admite nuevos cambios.");
+  }
 
   const profileResults = await Promise.all([
     supabase
@@ -113,7 +125,9 @@ export async function saveRemoteJourney(
       run_id: run.id,
       node_id: challenge.nodeId,
       step_id: stepId,
-      draft: step.draft,
+      // A JSON null becomes SQL NULL in PostgREST. Older databases still have
+      // a NOT NULL constraint, so use a JSON object for an empty draft.
+      draft: step.draft === null ? {} : step.draft,
       hints_used: step.revealedHints,
       active_seconds: Math.round(step.totalActiveSeconds),
       solved_at: step.solvedAt ? new Date(step.solvedAt).toISOString() : null,
@@ -127,7 +141,7 @@ export async function saveRemoteJourney(
     if (error) throw error;
   }
 
-  const attemptRows = Object.values(state.challengeProgress).flatMap((challenge) =>
+  const attemptedRows = Object.values(state.challengeProgress).flatMap((challenge) =>
     Object.values(challenge.steps).flatMap((step) =>
       step.attempts.map((attempt) => ({
         id: attempt.id,
@@ -135,7 +149,7 @@ export async function saveRemoteJourney(
         node_id: attempt.nodeId,
         step_id: attempt.stepId,
         attempt_number: attempt.attemptNumber,
-        answer: attempt.answer,
+        answer: attempt.answer === null ? {} : attempt.answer,
         is_correct: attempt.isCorrect,
         score: attempt.score ?? null,
         duration_seconds: Math.round(attempt.durationSeconds),
@@ -145,6 +159,27 @@ export async function saveRemoteJourney(
       }))
     )
   );
+  const attemptRows = [];
+  if (attemptedRows.length) {
+    const { data: existingAttempts, error } = await supabase
+      .from("attempts")
+      .select("id,node_id,step_id,attempt_number")
+      .eq("run_id", run.id);
+    if (error) throw error;
+    const existingIds = new Set((existingAttempts ?? []).map((attempt) => attempt.id));
+    const nextNumbers = new Map<string, number>();
+    for (const attempt of existingAttempts ?? []) {
+      const key = `${attempt.node_id}:${attempt.step_id}`;
+      nextNumbers.set(key, Math.max(nextNumbers.get(key) ?? 0, attempt.attempt_number));
+    }
+    for (const attempt of attemptedRows.sort((a, b) => a.submitted_at.localeCompare(b.submitted_at))) {
+      if (existingIds.has(attempt.id)) continue;
+      const key = `${attempt.node_id}:${attempt.step_id}`;
+      const nextNumber = (nextNumbers.get(key) ?? 0) + 1;
+      nextNumbers.set(key, nextNumber);
+      attemptRows.push({ ...attempt, attempt_number: nextNumber });
+    }
+  }
   if (attemptRows.length) {
     const { error } = await supabase
       .from("attempts")
