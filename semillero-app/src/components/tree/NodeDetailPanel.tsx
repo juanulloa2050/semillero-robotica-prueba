@@ -50,6 +50,7 @@ import {
 } from "@/lib/challengePresentation";
 import { BRANCHES } from "@/lib/data/branches";
 import { isImplementedChallengeNodeId } from "@/lib/challenges/registry";
+import { useAppState } from "@/lib/state/AppStateContext";
 import type {
   NodeChallengeProgress,
   NodeStatus,
@@ -176,6 +177,7 @@ export function NodeDetailPanel({
   testerMode?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
+  const { flushNow, saveStatus } = useAppState();
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const statusCardRef = useRef<HTMLElement>(null);
@@ -306,6 +308,9 @@ export function NodeDetailPanel({
               status={status}
               closeButtonRef={closeButtonRef}
               onClose={onClose}
+              onSaveProgress={flushNow}
+              saveStatus={saveStatus}
+              testerMode={testerMode}
             />
 
             <ChallengeBody
@@ -334,11 +339,17 @@ function ChallengeHeader({
   status,
   closeButtonRef,
   onClose,
+  onSaveProgress,
+  saveStatus,
+  testerMode,
 }: {
   node: SkillNodeDef;
   status: NodeStatus;
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
+  onSaveProgress: () => void;
+  saveStatus: "idle" | "saving" | "saved" | "error";
+  testerMode: boolean;
 }) {
   const branch = BRANCHES[node.branchId];
 
@@ -375,15 +386,31 @@ function ChallengeHeader({
           </div>
         </div>
 
-        <button
-          ref={closeButtonRef}
-          type="button"
-          onClick={onClose}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-night/35 text-muted transition-colors hover:border-cyan/35 hover:bg-surface-raised hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
-          aria-label="Cerrar detalle del reto"
-        >
-          <CloseIcon />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {!testerMode && status !== "locked" && (
+            <div className="flex items-center gap-2">
+              <span role="status" aria-live="polite" className={`hidden text-xs sm:inline ${saveStatus === "error" ? "text-danger" : "text-muted"}`}>
+                {saveStatus === "saved" ? "Guardado" : saveStatus === "error" ? "Sin guardar" : ""}
+              </span>
+              <button
+                type="button"
+                onClick={onSaveProgress}
+                className="min-h-10 rounded-xl border border-cyan/45 bg-cyan/10 px-3 text-xs font-semibold text-cyan transition-colors hover:bg-cyan/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan sm:px-4 sm:text-sm"
+              >
+                {saveStatus === "saving" ? "Guardando…" : saveStatus === "error" ? "Reintentar guardado" : "Guardar progreso"}
+              </button>
+            </div>
+          )}
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-night/35 text-muted transition-colors hover:border-cyan/35 hover:bg-surface-raised hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
+            aria-label="Cerrar detalle del reto"
+          >
+            <CloseIcon />
+          </button>
+        </div>
       </div>
     </header>
   );

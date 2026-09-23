@@ -453,6 +453,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(saveTimeout.current);
       saveTimeout.current = null;
     }
+    setSaveStatus("saving");
     persistState(stateRef.current);
   }, [persistState]);
 
